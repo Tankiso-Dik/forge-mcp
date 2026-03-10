@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "decisions": [
+    {
+      "id": "decision_small_1",
+      "title": "Use typed Forge updates",
+      "detail": "Structured mutations should stay explicit instead of acting like loose patches.",
+      "createdAt": "2026-03-10T00:00:00.000Z"
+    }
+  ],
+  "triedAndAbandoned": [],
+  "observations": [
+    {
+      "id": "obs_small_1",
+      "kind": "bug",
+      "summary": "Small fixture keeps one baseline observation.",
+      "createdAt": "2026-03-10T00:10:00.000Z"
+    }
+  ],
+  "habits": [
+    {
+      "id": "habit_small_1",
+      "description": "Write the next step at session close.",
+      "status": "confirmed",
+      "createdAt": "2026-03-10T00:20:00.000Z"
+    }
+  ],
+  "favouritePrompts": [],
+  "issues": [
+    {
+      "id": "issue_small_1",
+      "title": "Need explicit issue resolution flow",
+      "status": "open",
+      "detail": "The benchmark fixture expects resolution metadata to be stored together.",
+      "createdAt": "2026-03-10T00:30:00.000Z"
+    }
+  ],
+  "driftLog": [
+    {
+      "id": "drift_small_1",
+      "severity": "medium",
+      "status": "open",
+      "summary": "Working view phrasing might drift from the plan.",
+      "detail": "Use this as a small continuity baseline.",
+      "recommendedAction": "Record the conflict and revisit the relevant plan or decision before the next major change.",
+      "requiresAttention": false,
+      "createdAt": "2026-03-10T00:40:00.000Z"
+    }
+  ],
+  "concerns": [
+    {
+      "id": "concern_small_1",
+      "title": "Keep continuity concise",
+      "detail": "Forge should summarize without over-narrating routine actions.",
+      "createdAt": "2026-03-10T00:50:00.000Z"
+    }
+  ],
+  "session": {
+    "summary": "Previous small-project session complete.",
+    "nextStep": "Resume with the remaining open issue.",
+    "updatedAt": "2026-03-10T01:00:00.000Z"
+  }
+}

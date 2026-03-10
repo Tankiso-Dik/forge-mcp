@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "id": "phase_longitudinal_1",
+      "title": "Orient And Solve Foundations",
+      "status": "done",
+      "steps": [
+        {
+          "id": "step_longitudinal_1",
+          "title": "Load the continuity state",
+          "status": "done",
+          "notes": "Loaded Forge state and oriented from the working view before reading the workspace files."
+        },
+        {
+          "id": "step_longitudinal_2",
+          "title": "Review workspace files and session scope",
+          "status": "done",
+          "notes": "Reviewed TASKS.md, WORKBOOK.md, and README.md to confirm Session 1 scope and later-session boundaries."
+        },
+        {
+          "id": "step_longitudinal_3",
+          "title": "Solve Set A and Set B in WORKBOOK.md",
+          "status": "done",
+          "notes": "Solved Set A and Set B in WORKBOOK.md with concise derivations and left later-session work untouched."
+        }
+      ]
+    },
+    {
+      "id": "phase_longitudinal_2",
+      "title": "Verify And Extend Workbook",
+      "status": "todo",
+      "steps": [
+        {
+          "id": "step_longitudinal_4",
+          "title": "Review earlier solutions for correctness and clarity",
+          "status": "todo"
+        },
+        {
+          "id": "step_longitudinal_5",
+          "title": "Solve Set C in WORKBOOK.md",
+          "status": "todo"
+        },
+        {
+          "id": "step_longitudinal_6",
+          "title": "Capture reusable patterns in HEURISTICS.md",
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "phase_longitudinal_3",
+      "title": "Close Interim Session",
+      "status": "done",
+      "steps": [
+        {
+          "id": "step_longitudinal_7",
+          "title": "Leave a handoff for the changed deliverable",
+          "status": "done",
+          "notes": "Left WORKBOOK.md updated through Session 1 only and prepared a handoff that keeps Session 2 verification and later deliverable changes explicit."
+        }
+      ]
+    }
+  ]
+}

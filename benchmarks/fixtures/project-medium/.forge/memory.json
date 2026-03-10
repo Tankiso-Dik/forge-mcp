@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "decisions": [
+    {
+      "id": "decision_medium_1",
+      "title": "Decision 1",
+      "detail": "Baseline decision one.",
+      "createdAt": "2026-03-10T00:00:00.000Z"
+    },
+    {
+      "id": "decision_medium_2",
+      "title": "Decision 2",
+      "detail": "Baseline decision two.",
+      "createdAt": "2026-03-10T00:10:00.000Z"
+    },
+    {
+      "id": "decision_medium_3",
+      "title": "Decision 3",
+      "detail": "Baseline decision three.",
+      "createdAt": "2026-03-10T00:20:00.000Z"
+    },
+    {
+      "id": "decision_medium_4",
+      "title": "Decision 4",
+      "detail": "Baseline decision four.",
+      "createdAt": "2026-03-10T00:30:00.000Z"
+    },
+    {
+      "id": "decision_medium_5",
+      "title": "Decision 5",
+      "detail": "Baseline decision five.",
+      "createdAt": "2026-03-10T00:40:00.000Z"
+    },
+    {
+      "id": "decision_medium_6",
+      "title": "Decision 6",
+      "detail": "Baseline decision six.",
+      "createdAt": "2026-03-10T00:50:00.000Z"
+    },
+    {
+      "id": "decision_medium_7",
+      "title": "Decision 7",
+      "detail": "Baseline decision seven.",
+      "createdAt": "2026-03-10T01:00:00.000Z"
+    }
+  ],
+  "triedAndAbandoned": [],
+  "observations": [
+    {
+      "id": "obs_medium_1",
+      "kind": "note",
+      "summary": "Observation 1",
+      "createdAt": "2026-03-10T01:10:00.000Z"
+    },
+    {
+      "id": "obs_medium_2",
+      "kind": "tech_debt",
+      "summary": "Observation 2",
+      "createdAt": "2026-03-10T01:20:00.000Z"
+    },
+    {
+      "id": "obs_medium_3",
+      "kind": "struggle",
+      "summary": "Observation 3",
+      "createdAt": "2026-03-10T01:30:00.000Z"
+    },
+    {
+      "id": "obs_medium_4",
+      "kind": "bug",
+      "summary": "Observation 4",
+      "createdAt": "2026-03-10T01:40:00.000Z"
+    },
+    {
+      "id": "obs_medium_5",
+      "kind": "ambiguous_item",
+      "summary": "Observation 5",
+      "createdAt": "2026-03-10T01:50:00.000Z"
+    },
+    {
+      "id": "obs_medium_6",
+      "kind": "ui_inconsistency",
+      "summary": "Observation 6",
+      "createdAt": "2026-03-10T02:00:00.000Z"
+    }
+  ],
+  "habits": [],
+  "favouritePrompts": [],
+  "issues": [
+    {
+      "id": "issue_medium_1",
+      "title": "Open issue 1",
+      "status": "open",
+      "createdAt": "2026-03-10T02:10:00.000Z"
+    },
+    {
+      "id": "issue_medium_2",
+      "title": "Resolved issue 2",
+      "status": "resolved",
+      "resolution": "Already handled.",
+      "createdAt": "2026-03-10T02:20:00.000Z",
+      "resolvedAt": "2026-03-10T02:25:00.000Z",
+      "updatedAt": "2026-03-10T02:25:00.000Z"
+    },
+    {
+      "id": "issue_medium_3",
+      "title": "Open issue 3",
+      "status": "open",
+      "createdAt": "2026-03-10T02:30:00.000Z"
+    }
+  ],
+  "driftLog": [
+    {
+      "id": "drift_medium_1",
+      "severity": "low",
+      "status": "resolved",
+      "summary": "Old resolved drift",
+      "recommendedAction": "Track the drift and monitor whether it becomes a repeated pattern.",
+      "requiresAttention": false,
+      "createdAt": "2026-03-10T02:40:00.000Z",
+      "updatedAt": "2026-03-10T02:50:00.000Z"
+    },
+    {
+      "id": "drift_medium_2",
+      "severity": "high",
+      "status": "open",
+      "summary": "Active architecture contradiction",
+      "recommendedAction": "Escalate the conflict and confirm whether the plan or architecture has changed.",
+      "requiresAttention": true,
+      "createdAt": "2026-03-10T03:00:00.000Z"
+    }
+  ],
+  "concerns": [
+    {
+      "id": "concern_medium_1",
+      "title": "Concern 1",
+      "detail": "Keep medium fixtures compact.",
+      "createdAt": "2026-03-10T03:10:00.000Z"
+    },
+    {
+      "id": "concern_medium_2",
+      "title": "Concern 2",
+      "detail": "Preserve the important handoff details.",
+      "createdAt": "2026-03-10T03:20:00.000Z"
+    }
+  ],
+  "session": {
+    "summary": "Medium fixture handoff.",
+    "nextStep": "Use the pruned working view to resume work quickly.",
+    "updatedAt": "2026-03-10T03:30:00.000Z"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "id": "phase_nested_1",
+      "title": "Nested Discovery",
+      "status": "in_progress",
+      "steps": [
+        {
+          "id": "step_nested_1",
+          "title": "Confirm nested cwd discovery",
+          "status": "in_progress"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "decisions": [
+    {
+      "id": "decision_partial_1",
+      "title": "Partial fixtures should still load",
+      "detail": "Missing plan and phases files must normalize to defaults.",
+      "createdAt": "2026-03-10T00:00:00.000Z"
+    }
+  ],
+  "session": {
+    "summary": "Partial state fixture",
+    "nextStep": "Recover the missing plan and phases files on demand.",
+    "updatedAt": "2026-03-10T00:10:00.000Z"
+  }
+}

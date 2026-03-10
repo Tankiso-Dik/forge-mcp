@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "id": "phase_stress_1",
+      "title": "Synthesize Product Direction",
+      "status": "done",
+      "steps": [
+        {
+          "id": "step_stress_1",
+          "title": "Load continuity state and review the source pack",
+          "status": "done",
+          "notes": "Loaded Forge continuity state, used the working view to focus on the portability issue, and reviewed the core source pack without opening later-session deliverables."
+        },
+        {
+          "id": "step_stress_2",
+          "title": "Draft the initial product spec",
+          "status": "done",
+          "notes": "Drafted PRODUCT_SPEC.md as a synthesized Release 1 spec focused on local-first weekly recovery, single-user scope, and explicit trust boundaries."
+        },
+        {
+          "id": "step_stress_3",
+          "title": "Make important contradictions visible",
+          "status": "done",
+          "notes": "Made the main tensions visible in PRODUCT_SPEC.md, especially portability, deadline import, uncertainty modeling, and recovery data shape."
+        }
+      ]
+    },
+    {
+      "id": "phase_stress_2",
+      "title": "Produce Architecture And Risks",
+      "status": "todo",
+      "steps": [
+        {
+          "id": "step_stress_4",
+          "title": "Draft the architecture plan",
+          "status": "todo"
+        },
+        {
+          "id": "step_stress_5",
+          "title": "Draft the risk register",
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "phase_stress_3",
+      "title": "Handle Incident Driven Scope Change",
+      "status": "todo",
+      "steps": [
+        {
+          "id": "step_stress_6",
+          "title": "Assess the incident impact",
+          "status": "todo"
+        },
+        {
+          "id": "step_stress_7",
+          "title": "Revise scope and messaging explicitly",
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "phase_stress_4",
+      "title": "Refine Package And Executive Summary",
+      "status": "todo",
+      "steps": [
+        {
+          "id": "step_stress_8",
+          "title": "Apply review feedback",
+          "status": "todo"
+        },
+        {
+          "id": "step_stress_9",
+          "title": "Write the executive summary",
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "phase_stress_5",
+      "title": "Final Review And Closeout",
+      "status": "todo",
+      "steps": [
+        {
+          "id": "step_stress_10",
+          "title": "Resolve remaining continuity state and close cleanly",
+          "status": "todo"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "decisions": [
+    {
+      "id": "decision_stress_1",
+      "title": "Keep the first release local-first",
+      "detail": "Local-first is a core differentiator and should not be weakened casually.",
+      "createdAt": "2026-03-10T12:00:00.000Z"
+    }
+  ],
+  "triedAndAbandoned": [],
+  "observations": [
+    {
+      "id": "obs_7181245d-9aa3-4928-9fb1-6d7667623f58",
+      "kind": "ambiguous_item",
+      "summary": "Release 1 import boundary is still unresolved",
+      "detail": "The spec now makes portability non-core for Release 1, but automatic deadline import remains an important unresolved boundary because it pulls against low-friction, offline, and trust constraints.",
+      "createdAt": "2026-03-10T12:50:56.957Z"
+    }
+  ],
+  "habits": [],
+  "favouritePrompts": [],
+  "issues": [
+    {
+      "id": "issue_stress_1",
+      "title": "Unclear portability story",
+      "status": "open",
+      "detail": "The source material hints at portability and reminders, but the release constraints are stricter.",
+      "createdAt": "2026-03-10T12:05:00.000Z"
+    }
+  ],
+  "driftLog": [],
+  "concerns": [
+    {
+      "id": "concern_stress_1",
+      "title": "Do not turn synthesis into note-dumping",
+      "detail": "The deliverables should stay deliberate and readable, not just copy all source material.",
+      "createdAt": "2026-03-10T12:10:00.000Z"
+    }
+  ],
+  "session": {
+    "summary": "Completed Session 1 synthesis for Northstar Desk. PRODUCT_SPEC.md now defines a narrow Release 1 posture around local-first weekly recovery on one primary device, and it surfaces the main unresolved tensions without pretending they are solved.",
+    "nextStep": "Resume from Forge state, use the clarified Release 1 scope to draft ARCHITECTURE_PLAN.md and RISK_REGISTER.md, and keep the portability and deadline-import tensions explicit rather than smoothing them over.",
+    "updatedAt": "2026-03-10T12:51:21.046Z"
+  }
+}

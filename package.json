@@ -1,0 +1,46 @@
+{
+  "name": "forge-mcp-server",
+  "version": "0.1.0",
+  "description": "Personal local-only MCP server for Codex CLI project continuity, optimized for low-latency stdio and on-machine state.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "forge-mcp-server": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "npm run typecheck && npm run build",
+    "check:all": "npm run check && npm run bench:check",
+    "bench": "npm run build && tsx benchmarks/src/run.ts",
+    "bench:compare": "npm run build && tsx benchmarks/src/run.ts --compare-pinned --max-score-drop 2 --fail-on-regression",
+    "bench:stdio": "npm run build && tsx benchmarks/src/run.ts --transport stdio",
+    "bench:pin": "tsx benchmarks/src/pin-baseline.ts",
+    "bench:ci": "npm run build && tsx benchmarks/src/run.ts --compare-pinned --max-score-drop 2 --fail-on-regression",
+    "bench:check": "tsc --noEmit -p tsconfig.benchmarks.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "forge",
+    "codex",
+    "codex-cli",
+    "stdio",
+    "local-first",
+    "personal"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

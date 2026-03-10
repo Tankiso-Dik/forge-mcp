@@ -1,0 +1,8 @@
+{
+  "pinnedAt": "2026-03-10T14:10:21.437Z",
+  "benchmarkVersion": 1,
+  "jsonReportPath": "/home/tankiso/forge-mcp/benchmarks/baselines/pinned-report.json",
+  "markdownReportPath": "/home/tankiso/forge-mcp/benchmarks/baselines/pinned-report.md",
+  "sourceJsonReportPath": "/home/tankiso/forge-mcp/benchmarks/reports/latest.json",
+  "sourceMarkdownReportPath": "/home/tankiso/forge-mcp/benchmarks/reports/latest.md"
+}

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "stack": [
+    "TypeScript"
+  ],
+  "designStyle": [
+    "local-first"
+  ],
+  "coreFeatures": [
+    "nested discovery"
+  ],
+  "plannedFeatures": [],
+  "architectureDecisions": [
+    {
+      "id": "arch_nested_1",
+      "title": "Parent Forge root owns nested workspaces",
+      "detail": "Nested cwd resolution should stop at the nearest valid .forge.",
+      "createdAt": "2026-03-10T00:00:00.000Z"
+    }
+  ],
+  "acceptedSuggestions": []
+}

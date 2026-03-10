@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "stack": [
+    "local reasoning workflow"
+  ],
+  "designStyle": [
+    "concise exact derivations",
+    "single-file result artifact"
+  ],
+  "coreFeatures": [
+    "grouped problem solving",
+    "session continuity",
+    "phase tracking"
+  ],
+  "plannedFeatures": [
+    "clean resume for Group C"
+  ],
+  "architectureDecisions": [
+    {
+      "id": "arch_reasoning_1",
+      "title": "Use Forge only when it adds continuity value",
+      "detail": "The main task is still solving the problems; Forge should stay quiet and useful.",
+      "createdAt": "2026-03-10T10:12:00.000Z"
+    }
+  ],
+  "acceptedSuggestions": []
+}

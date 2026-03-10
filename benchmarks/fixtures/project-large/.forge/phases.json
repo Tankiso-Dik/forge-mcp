@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "id": "phase_large_01",
+      "title": "Phase 01",
+      "status": "done",
+      "steps": [
+        { "id": "step_large_01_1", "title": "Step 1", "status": "done" },
+        { "id": "step_large_01_2", "title": "Step 2", "status": "done" }
+      ]
+    },
+    {
+      "id": "phase_large_02",
+      "title": "Phase 02",
+      "status": "in_progress",
+      "steps": [
+        { "id": "step_large_02_1", "title": "Step 1", "status": "done" },
+        { "id": "step_large_02_2", "title": "Step 2", "status": "in_progress" }
+      ]
+    },
+    {
+      "id": "phase_large_03",
+      "title": "Phase 03",
+      "status": "todo",
+      "steps": [
+        { "id": "step_large_03_1", "title": "Step 1", "status": "todo" },
+        { "id": "step_large_03_2", "title": "Step 2", "status": "todo" }
+      ]
+    },
+    {
+      "id": "phase_large_04",
+      "title": "Phase 04",
+      "status": "in_progress",
+      "steps": [
+        { "id": "step_large_04_1", "title": "Step 1", "status": "done" },
+        { "id": "step_large_04_2", "title": "Step 2", "status": "todo" }
+      ]
+    },
+    {
+      "id": "phase_large_05",
+      "title": "Phase 05",
+      "status": "todo",
+      "steps": [
+        { "id": "step_large_05_1", "title": "Step 1", "status": "todo" }
+      ]
+    }
+  ]
+}

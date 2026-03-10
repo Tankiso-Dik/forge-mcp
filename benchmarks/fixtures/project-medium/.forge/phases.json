@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "id": "phase_medium_1",
+      "title": "Done Phase",
+      "status": "done",
+      "steps": [
+        {
+          "id": "step_medium_1",
+          "title": "Completed step",
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "id": "phase_medium_2",
+      "title": "Active Phase",
+      "status": "in_progress",
+      "steps": [
+        {
+          "id": "step_medium_2",
+          "title": "Current work",
+          "status": "in_progress"
+        }
+      ]
+    },
+    {
+      "id": "phase_medium_3",
+      "title": "Queued Phase",
+      "status": "todo",
+      "steps": [
+        {
+          "id": "step_medium_3",
+          "title": "Future work",
+          "status": "todo"
+        }
+      ]
+    }
+  ]
+}

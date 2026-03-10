@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "stack": [
+    "local reasoning workflow"
+  ],
+  "designStyle": [
+    "plain markdown",
+    "concise explicit derivations",
+    "lightweight continuity"
+  ],
+  "coreFeatures": [
+    "multi-session reasoning",
+    "workbook artifact",
+    "phase tracking",
+    "session handoff"
+  ],
+  "plannedFeatures": [
+    "later guide-style packaging if required"
+  ],
+  "architectureDecisions": [
+    {
+      "id": "arch_longitudinal_1",
+      "title": "Use Forge only where continuity adds value",
+      "detail": "Reasoning and file updates remain primary; Forge should stay quiet and precise.",
+      "createdAt": "2026-03-10T11:12:00.000Z"
+    }
+  ],
+  "acceptedSuggestions": []
+}

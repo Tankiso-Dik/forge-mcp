@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "stack": [
+    "local planning product"
+  ],
+  "designStyle": [
+    "clear synthesis",
+    "local-first scope discipline",
+    "reader-friendly deliverables"
+  ],
+  "coreFeatures": [
+    "continuity-heavy synthesis",
+    "multi-session drafting",
+    "issue and drift handling"
+  ],
+  "plannedFeatures": [
+    "later executive-ready package"
+  ],
+  "architectureDecisions": [
+    {
+      "id": "arch_stress_1",
+      "title": "Use Forge only where continuity adds value",
+      "detail": "The main work is still synthesis and planning; Forge should support that without becoming the work itself.",
+      "createdAt": "2026-03-10T12:15:00.000Z"
+    }
+  ],
+  "acceptedSuggestions": []
+}

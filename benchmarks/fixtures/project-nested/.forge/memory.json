@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "decisions": [
+    {
+      "id": "decision_nested_1",
+      "title": "Nested projects should resolve upward",
+      "detail": "Discovery should find the nearest parent .forge directory.",
+      "createdAt": "2026-03-10T00:00:00.000Z"
+    }
+  ],
+  "triedAndAbandoned": [],
+  "observations": [],
+  "habits": [],
+  "favouritePrompts": [],
+  "issues": [],
+  "driftLog": [],
+  "concerns": [],
+  "session": {
+    "summary": "Nested fixture ready.",
+    "nextStep": "Exercise parent project discovery from apps/web/src.",
+    "updatedAt": "2026-03-10T00:10:00.000Z"
+  }
+}

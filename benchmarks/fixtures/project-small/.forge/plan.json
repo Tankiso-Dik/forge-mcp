@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "stack": [
+    "TypeScript",
+    "MCP SDK"
+  ],
+  "designStyle": [
+    "local-first",
+    "small and explicit"
+  ],
+  "coreFeatures": [
+    "session continuity",
+    "drift detection"
+  ],
+  "plannedFeatures": [
+    "benchmark harness"
+  ],
+  "architectureDecisions": [
+    {
+      "id": "arch_small_1",
+      "title": "Use stdio first",
+      "detail": "The first working Forge server should stay local and simple.",
+      "createdAt": "2026-03-10T00:00:00.000Z"
+    }
+  ],
+  "acceptedSuggestions": []
+}

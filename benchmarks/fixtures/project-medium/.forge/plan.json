@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "stack": [
+    "TypeScript",
+    "MCP SDK",
+    "JSON persistence"
+  ],
+  "designStyle": [
+    "fast startup",
+    "strong typing"
+  ],
+  "coreFeatures": [
+    "project discovery",
+    "working view pruning",
+    "drift handling"
+  ],
+  "plannedFeatures": [
+    "benchmark harness",
+    "report comparison"
+  ],
+  "architectureDecisions": [
+    {
+      "id": "arch_medium_1",
+      "title": "Architecture 1",
+      "detail": "Decision detail 1.",
+      "createdAt": "2026-03-10T00:00:00.000Z"
+    },
+    {
+      "id": "arch_medium_2",
+      "title": "Architecture 2",
+      "detail": "Decision detail 2.",
+      "createdAt": "2026-03-10T00:10:00.000Z"
+    },
+    {
+      "id": "arch_medium_3",
+      "title": "Architecture 3",
+      "detail": "Decision detail 3.",
+      "createdAt": "2026-03-10T00:20:00.000Z"
+    },
+    {
+      "id": "arch_medium_4",
+      "title": "Architecture 4",
+      "detail": "Decision detail 4.",
+      "createdAt": "2026-03-10T00:30:00.000Z"
+    },
+    {
+      "id": "arch_medium_5",
+      "title": "Architecture 5",
+      "detail": "Decision detail 5.",
+      "createdAt": "2026-03-10T00:40:00.000Z"
+    },
+    {
+      "id": "arch_medium_6",
+      "title": "Architecture 6",
+      "detail": "Decision detail 6.",
+      "createdAt": "2026-03-10T00:50:00.000Z"
+    }
+  ],
+  "acceptedSuggestions": []
+}

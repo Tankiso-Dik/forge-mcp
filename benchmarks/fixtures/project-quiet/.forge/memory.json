@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "decisions": [
+    {
+      "id": "decision_quiet_1",
+      "title": "Keep the project simple",
+      "detail": "This fixture should stay intentionally quiet.",
+      "createdAt": "2026-03-10T00:00:00.000Z"
+    }
+  ],
+  "triedAndAbandoned": [],
+  "observations": [],
+  "habits": [],
+  "favouritePrompts": [],
+  "issues": [],
+  "driftLog": [],
+  "concerns": [],
+  "session": {}
+}

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "id": "phase_quiet_1",
+      "title": "Finished setup",
+      "status": "done",
+      "steps": [
+        {
+          "id": "step_quiet_1",
+          "title": "Complete initial setup",
+          "status": "done"
+        }
+      ]
+    }
+  ]
+}

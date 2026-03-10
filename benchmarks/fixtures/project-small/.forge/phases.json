@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "id": "phase_small_1",
+      "title": "Benchmark Preparation",
+      "status": "in_progress",
+      "steps": [
+        {
+          "id": "step_small_1",
+          "title": "Keep fixtures readable",
+          "status": "done"
+        },
+        {
+          "id": "step_small_2",
+          "title": "Resolve the open benchmark issue",
+          "status": "todo"
+        }
+      ]
+    }
+  ]
+}

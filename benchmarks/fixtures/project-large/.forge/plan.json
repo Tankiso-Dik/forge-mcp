@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "stack": ["TypeScript", "MCP SDK", "JSON persistence", "Benchmark harness"],
+  "designStyle": ["local-first", "strong typing", "bounded context"],
+  "coreFeatures": ["continuity", "plan tracking", "phase tracking", "drift visibility"],
+  "plannedFeatures": ["run comparison", "ci wiring"],
+  "architectureDecisions": [
+    { "id": "arch_large_01", "title": "Architecture 01", "detail": "Detail 01", "createdAt": "2026-03-10T00:00:00.000Z" },
+    { "id": "arch_large_02", "title": "Architecture 02", "detail": "Detail 02", "createdAt": "2026-03-10T00:05:00.000Z" },
+    { "id": "arch_large_03", "title": "Architecture 03", "detail": "Detail 03", "createdAt": "2026-03-10T00:10:00.000Z" },
+    { "id": "arch_large_04", "title": "Architecture 04", "detail": "Detail 04", "createdAt": "2026-03-10T00:15:00.000Z" },
+    { "id": "arch_large_05", "title": "Architecture 05", "detail": "Detail 05", "createdAt": "2026-03-10T00:20:00.000Z" },
+    { "id": "arch_large_06", "title": "Architecture 06", "detail": "Detail 06", "createdAt": "2026-03-10T00:25:00.000Z" },
+    { "id": "arch_large_07", "title": "Architecture 07", "detail": "Detail 07", "createdAt": "2026-03-10T00:30:00.000Z" },
+    { "id": "arch_large_08", "title": "Architecture 08", "detail": "Detail 08", "createdAt": "2026-03-10T00:35:00.000Z" }
+  ],
+  "acceptedSuggestions": [
+    { "id": "suggestion_large_01", "title": "Suggestion 01", "detail": "Keep the benchmark harness modular.", "createdAt": "2026-03-10T00:40:00.000Z" }
+  ]
+}

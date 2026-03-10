@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "stack": [
+    "TypeScript"
+  ],
+  "designStyle": [
+    "quiet"
+  ],
+  "coreFeatures": [
+    "light continuity"
+  ],
+  "plannedFeatures": [],
+  "architectureDecisions": [],
+  "acceptedSuggestions": []
+}
