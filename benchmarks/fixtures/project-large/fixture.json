@@ -1,5 +1,0 @@
-{
-  "name": "project-large",
-  "description": "A larger Forge-managed project for payload and latency pressure.",
-  "entryCwd": "."
-}

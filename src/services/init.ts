@@ -6,13 +6,15 @@ import {
   FORGE_DIRECTORY_NAME,
   MEMORY_FILE_NAME,
   PHASES_FILE_NAME,
-  PLAN_FILE_NAME
+  PLAN_FILE_NAME,
+  SHAPE_FILE_NAME
 } from "../constants.js";
 import {
   ForgeInitOutputSchema,
   MemoryStateSchema,
   PhasesStateSchema,
-  PlanStateSchema
+  PlanStateSchema,
+  ShapeStateSchema
 } from "../schemas.js";
 import { writeJsonAtomic } from "./filesystem.js";
 import type { ForgeInitOutput } from "../types.js";
@@ -40,16 +42,18 @@ export async function initializeForgeProject(
   const memoryFilePath = path.join(forgeDirectory, MEMORY_FILE_NAME);
   const planFilePath = path.join(forgeDirectory, PLAN_FILE_NAME);
   const phasesFilePath = path.join(forgeDirectory, PHASES_FILE_NAME);
+  const shapeFilePath = path.join(forgeDirectory, SHAPE_FILE_NAME);
 
   const existingForgeFiles = (
     await Promise.all([
       pathExists(memoryFilePath),
       pathExists(planFilePath),
-      pathExists(phasesFilePath)
+      pathExists(phasesFilePath),
+      pathExists(shapeFilePath)
     ])
   )
     .map((exists, index) =>
-      exists ? [MEMORY_FILE_NAME, PLAN_FILE_NAME, PHASES_FILE_NAME][index] : null
+      exists ? [MEMORY_FILE_NAME, PLAN_FILE_NAME, PHASES_FILE_NAME, SHAPE_FILE_NAME][index] : null
     )
     .filter((value): value is string => value !== null);
 
@@ -64,7 +68,8 @@ export async function initializeForgeProject(
   await Promise.all([
     writeJsonAtomic(memoryFilePath, MemoryStateSchema.parse({})),
     writeJsonAtomic(planFilePath, PlanStateSchema.parse({})),
-    writeJsonAtomic(phasesFilePath, PhasesStateSchema.parse({}))
+    writeJsonAtomic(phasesFilePath, PhasesStateSchema.parse({})),
+    writeJsonAtomic(shapeFilePath, ShapeStateSchema.parse({}))
   ]);
 
   return ForgeInitOutputSchema.parse({
@@ -76,7 +81,8 @@ export async function initializeForgeProject(
     files: {
       memory: memoryFilePath,
       plan: planFilePath,
-      phases: phasesFilePath
+      phases: phasesFilePath,
+      shape: shapeFilePath
     },
     message:
       existingForgeFiles.length > 0 && force

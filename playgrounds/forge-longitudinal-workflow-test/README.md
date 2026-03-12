@@ -1,14 +1,22 @@
 # Forge Longitudinal Workflow Test
 
+Legacy note: this playground targets an older Forge workflow. The workspace still works, but judge it through the current public surface:
+- `forge_init`
+- `forge_load`
+- `forge_checkpoint`
+- `forge_update`
+- `forge_shape`
+- `forge_update_shape`
+
 This workspace is a longer Forge-managed testbed for observing how a fresh Codex session uses Forge across multiple sessions instead of a single short task.
 
 It is designed to create natural opportunities for:
 - early orientation with `forge_load`
 - phase tracking across several resumptions
 - durable updates to memory and plan
-- quick observations and habit suggestions
+- quick milestone and fact capture
 - issue tracking when explanations or structure are weak
-- possible drift or phase rebuild when the deliverable changes later
+- possible explicit phase updates when the deliverable changes later
 
 ## Files
 
@@ -30,11 +38,11 @@ It is designed to create natural opportunities for:
 
 ## What to watch for
 
-- whether Codex uses `workingView` early instead of re-reading everything blindly
+- whether Codex uses `workingView.shelf` and `workingView.session` early instead of re-reading everything blindly
 - whether progress is reflected in `.forge/phases.json` as the work advances
-- whether observations, issues, or habits are logged only when they add value
+- whether notes or issues are written only when they add value
 - whether the session handoff becomes better over time
-- whether the Session 3 deliverable change triggers explicit plan handling instead of silent drift
+- whether the Session 3 deliverable change triggers explicit plan or phase handling instead of silent confusion
 
 ## Why this is a better Forge test
 

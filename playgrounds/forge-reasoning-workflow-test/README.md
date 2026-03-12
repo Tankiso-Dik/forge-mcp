@@ -1,5 +1,13 @@
 # Forge Reasoning Workflow Test
 
+Legacy note: this playground was written against an older Forge workflow. The reasoning exercise is still fine, but evaluate it using the current public surface:
+- `forge_init`
+- `forge_load`
+- `forge_checkpoint`
+- `forge_update`
+- `forge_shape`
+- `forge_update_shape`
+
 This workspace is a small Forge-managed testbed for observing how a fresh Codex session uses Forge during a short reasoning task.
 
 It is intentionally not a product project. The goal is to watch whether Codex:
@@ -28,9 +36,9 @@ It is intentionally not a product project. The goal is to watch whether Codex:
 ## What to look for
 
 - early use of `forge_load`
-- use of `workingView` for orientation
+- use of `workingView.shelf` and `workingView.session` for orientation
 - phase progress updates instead of only editing `answers.md`
-- useful observations or habits when a pattern emerges
-- a concrete `forge_session_end` handoff after the first run
+- useful milestone or fact notes when a pattern emerges
+- a concrete checkpointed handoff after the first run
 
 This is a local-only workflow test. It is meant to show how Forge complements ordinary reasoning work, not replace it.

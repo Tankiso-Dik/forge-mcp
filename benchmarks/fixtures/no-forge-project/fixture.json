@@ -1,5 +1,0 @@
-{
-  "name": "no-forge-project",
-  "description": "A plain workspace with no .forge directory yet.",
-  "entryCwd": "."
-}

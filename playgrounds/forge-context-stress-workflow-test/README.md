@@ -1,5 +1,13 @@
 # Forge Context Stress Workflow Test
 
+Legacy note: this workspace was created for an older Forge continuity model. It is still useful as a long-form continuity exercise, but references to `workingView` guidance should now be read through the lean current surface:
+- `forge_init`
+- `forge_load`
+- `forge_checkpoint`
+- `forge_update`
+- `forge_shape`
+- `forge_update_shape`
+
 This workspace is a harder Forge-managed test designed to make context management genuinely difficult across multiple fresh sessions.
 
 It is meant to expose the gaps that ordinary file-reading and short chat memory do not close well:
@@ -52,9 +60,9 @@ Observe whether a fresh Codex session uses Forge to stay coherent over a longer 
 ## What to watch for
 
 - early `forge_load`
-- use of `workingView.primaryFocus`, `recommendedActions`, and `doNotStartYet`
-- whether Codex logs only meaningful continuity items instead of every observation
-- whether scope changes are handled explicitly instead of silently drifting
+- use of `workingView.shelf` and `workingView.session`
+- whether Codex logs only meaningful continuity items instead of every thought
+- whether scope changes are handled explicitly instead of silently getting lost
 - whether the handoff quality improves over time
 - whether the final session resumes from tracked state instead of rediscovering everything
 

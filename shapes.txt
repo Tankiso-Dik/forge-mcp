@@ -1,0 +1,1932 @@
+Absolutely — here’s a remade **implementation prompt** and a revised **`FORGE_SHAPE_PLAN.md`** based on the leaner Shape model we converged on:
+
+* **Shape is its own file**
+
+* **Shape has its own read/write tools**
+
+* **Shape stays structural, not code-specific**
+
+* **Shape uses only three domains**
+
+  * `surfaces`
+  * `capabilities`
+  * `parts`
+
+* **Flow lives inside surfaces**
+
+* **No standalone relationships domain**
+
+* **Forge stays lighter by keeping `forge_load` lean**
+
+---
+
+# 1. Prompt for Codex / your AI
+
+```md
+Use the `mcp-builder` skill to design and implement **Forge Shape** inside the existing Forge MCP in TypeScript.
+
+Read `FORGE_SHAPE_PLAN.md` first and treat it as the source of truth for this feature’s purpose, schema, separation of concerns, workflow role, and tool behavior.
+
+## Goal
+
+Add **Forge Shape** as a dedicated structural mental-model layer for the project.
+
+Forge Shape should help the agent understand:
+
+- what the project currently looks like from the outside
+- what the project can do
+- what major internal parts make that possible
+- how the user is expected to experience and move through the project
+- how the current structural form of the project fits together
+
+Forge Shape is not:
+- generic notes
+- memory
+- issue tracking
+- phase tracking
+- code indexing
+- raw architecture commentary
+- another reasoning engine
+- implementation-level detail such as functions, formulas, or symbol-by-symbol behavior
+
+Forge Shape should be a **clean structural model** of the current project form.
+
+---
+
+## Tool surface constraints
+
+Do **not** overload `forge_load` with full Shape data.
+
+Keep `forge_load` lean.
+
+Implement Shape as its own file and its own read/write tool surface:
+
+- `forge_shape`
+- `forge_update_shape`
+
+Shape should fit alongside the remaining Forge tools:
+
+- `forge_load`
+- `forge_checkpoint`
+- `forge_update`
+
+If `forge_init` still exists internally, seed `shape.json` there too, but Shape should not depend on project init for its logic.
+
+---
+
+## File to add
+
+Add:
+
+`.forge/shape.json`
+
+This should be a distinct file, not folded into plan or memory.
+
+Reason:
+- `plan` = intended stable identity
+- `shape` = current structural understanding
+- `memory` = what happened, changed, or remains unresolved
+- `phases` = execution progress
+
+---
+
+## Shape model
+
+Shape v1 should use exactly these domains:
+
+- `surfaces`
+- `capabilities`
+- `parts`
+
+No standalone `relationships` domain in v1.
+
+Relationship-like facts should be embedded cleanly inside entries:
+- surfaces can point to connected surfaces and connected capabilities
+- capabilities can point to surfaced-in surfaces, supported-by parts, and dependent capabilities
+- parts can point to supported capabilities and dependent parts
+
+Do not introduce extra shape domains unless absolutely necessary.
+
+---
+
+## Shape domain intent
+
+### 1. `surfaces`
+The project as it is experienced from the outside.
+
+This is the user-facing or operator-facing layer:
+- screens
+- pages
+- views
+- panels
+- entry points
+- outputs
+- visible regions
+- flow expectations
+- what the user naturally does there
+- what appears or disappears contextually
+- what is expected to happen when the user interacts
+
+Flow should live inside surfaces, not in a separate domain.
+
+### 2. `capabilities`
+What the system can meaningfully do.
+
+This is the functional layer:
+- what user problem is solved
+- what action becomes possible
+- what meaningful system behavior is enabled
+- what inputs it works from
+- what outputs or state changes it produces
+
+Capabilities are not screens and not code parts.
+
+### 3. `parts`
+Major built pieces that support the project.
+
+This is the high-level internal construction layer:
+- major services
+- major modules
+- major subsystems
+- major storage/runtime pieces
+- important libraries or platforms where structurally relevant
+
+Parts describe role and support, not code internals.
+
+---
+
+## Product constraints
+
+### Keep these qualities
+- lean
+- structural
+- readable
+- agent-driven
+- durable across sessions
+- useful for fast orientation
+- useful for understanding how the system fits together
+
+### Avoid these failure modes
+- turning Shape into freeform notes
+- duplicating plan, memory, or phases
+- adding code-level implementation detail
+- introducing a heavy reasoning layer
+- making Shape mandatory in every session
+- making Shape too large to read selectively
+
+---
+
+## Required tool behavior
+
+## `forge_shape`
+Implement as the dedicated Shape read tool.
+
+It should support selective reads by domain and optional read modes.
+
+The agent should be able to request:
+- one domain
+- multiple domains
+- the full shape
+
+Suggested behavior:
+- default to compact mode
+- support full mode when needed
+
+Examples of the kinds of reads it should support:
+- surfaces only
+- capabilities only
+- parts only
+- surfaces + capabilities
+- full shape
+
+Keep the output useful and compact.
+
+## `forge_update_shape`
+Implement as the dedicated Shape write tool.
+
+It should support structured updates to:
+- surfaces
+- capabilities
+- parts
+
+Use this when:
+- a new surface appears
+- a capability is added or materially changed
+- a major part is added or re-scoped
+- the structural understanding of the project has changed
+
+Do not make this a fuzzy reasoning tool.
+It should perform clear structured mutation.
+
+---
+
+## Workflow fit
+
+### `forge_load`
+Should stay lean.
+It may include only minimal Shape awareness, such as:
+- shape exists
+- project type
+- shape summary
+- last updated
+- confidence
+
+Do not load full Shape by default.
+
+### `forge_shape`
+Use when the agent needs the structural map.
+
+Natural times to use it:
+- resuming a complex project
+- understanding how parts fit together
+- before making structural or user-facing changes
+- when the system map matters more than session history
+
+### `forge_checkpoint`
+This remains the normal progress tool.
+It should not become the main Shape read tool.
+
+Checkpoint may optionally support shape-related hints or write suggestions if a structural change is obvious, but it should not replace `forge_update_shape`.
+
+### `forge_update`
+Keep this for precise normal Forge state mutation.
+Do not turn it into the primary Shape mutation path.
+
+### `forge_update_shape`
+This is the precise Shape mutation path.
+Use it when the project’s current form has changed in a shape-worthy way.
+
+---
+
+## Shape-worthy changes
+
+Update Shape when:
+- a new surface appears
+- a major user flow meaningfully changes
+- a capability is added or materially re-scoped
+- a part appears, disappears, or changes role
+- the way the project fits together has meaningfully changed
+- the user-facing form or functional map is now different enough that future sessions would benefit from a refreshed structural model
+
+Do not update Shape for:
+- tiny bug fixes
+- styling tweaks with no structural effect
+- routine refactors
+- raw implementation changes with no system-shape consequence
+- session notes
+- issue-only or phase-only updates
+
+---
+
+## Deliverables
+
+Implement:
+- `.forge/shape.json`
+- Shape types and schema handling
+- `forge_shape`
+- `forge_update_shape`
+- minimal `forge_load` Shape awareness
+- docs for Shape
+- tests or benchmark coverage where appropriate
+
+Then summarize:
+1. what Shape is
+2. how it differs from plan, memory, and phases
+3. when the agent should naturally use Shape
+4. how `forge_shape` and `forge_update_shape` fit the leaner Forge workflow
+5. how the design avoids Shape becoming bloat
+```
+
+---
+
+# 2. `FORGE_SHAPE_PLAN.md`
+
+````md
+# Forge Shape — Plan
+
+## Overview
+
+Forge Shape is the project’s **current structural map**.
+
+It exists to help the agent build and maintain a clean mental model of:
+
+- what the user or operator encounters
+- what the system can do
+- what major internal pieces support those outcomes
+- how the project currently fits together
+
+Forge Shape is a structural layer, not a reasoning assistant and not a note system.
+
+It should help the agent say:
+
+> “I understand how this project is currently shaped.”
+
+Not:
+
+> “I have a lot of notes.”
+
+And not:
+
+> “I know the code internals in detail.”
+
+---
+
+## Why Forge Shape exists
+
+Without Shape, important structural understanding tends to get scattered across:
+
+- repo files
+- handoff summaries
+- phase notes
+- memory entries
+- implicit agent understanding
+
+That makes it harder for later sessions to answer questions like:
+
+- what are the main user-facing areas?
+- what are the main capabilities of the project?
+- what major pieces support those capabilities?
+- how is the project expected to behave from the outside?
+- what has become structurally true about the project now?
+
+Forge Shape gives that understanding one dedicated home.
+
+---
+
+## The problem it solves
+
+Forge already covers other layers:
+
+### `plan`
+What the project is intended to be.
+
+### `memory`
+What happened, changed, or remains unresolved.
+
+### `phases`
+How work progresses through time.
+
+But there is still a missing middle layer:
+
+### `shape`
+What the project currently looks like as a working system.
+
+This is the project’s lived structure:
+- the user-facing form
+- the functional form
+- the high-level internal support form
+
+That is what Shape solves.
+
+---
+
+## Separation of concerns
+
+## `plan`
+Use for:
+- stack
+- product direction
+- design posture
+- architectural principles
+- stable intended identity
+
+Question it answers:
+> What is this project supposed to be?
+
+## `shape`
+Use for:
+- surfaces
+- capabilities
+- parts
+- current structural form
+
+Question it answers:
+> How does this project currently fit together?
+
+## `memory`
+Use for:
+- decisions
+- issues
+- concerns
+- interpretations
+- superseded conclusions
+- handoff state
+- observations
+
+Question it answers:
+> What happened to this project over time, and what changed in understanding?
+
+## `phases`
+Use for:
+- execution progress
+- phase sequence
+- step completion
+
+Question it answers:
+> Where is the work, and how has it progressed?
+
+---
+
+## Core design principle
+
+Forge Shape should be:
+
+- structural, not verbose
+- durable, not fleeting
+- useful for orientation
+- useful for resumption
+- useful for understanding how the project works together
+- sparse enough that it stays readable
+
+If a Shape entry does not help a later session understand the project faster and more correctly, it probably does not belong there.
+
+---
+
+## Shape v1 model
+
+Shape v1 uses exactly three domains:
+
+- `surfaces`
+- `capabilities`
+- `parts`
+
+This is the leanest cut that still forms a meaningful project map.
+
+---
+
+## Top-level file
+
+Forge Shape lives in:
+
+`.forge/shape.json`
+
+Suggested top-level shape:
+
+```json
+{
+  "shape_version": 1,
+  "project_type": "web_app",
+  "summary": "A local-first casework dashboard centered around triage, bounded summary generation, and persistent case status tracking.",
+  "surfaces": [],
+  "capabilities": [],
+  "parts": [],
+  "updated_at": "2026-03-11T12:00:00Z",
+  "confidence": "medium"
+}
+````
+
+---
+
+## Domain 1: Surfaces
+
+### What Surfaces are
+
+Surfaces describe the project as it is experienced from the outside.
+
+This includes:
+
+* screens
+* views
+* panels
+* entry points
+* visible outputs
+* primary user-facing regions
+* expected flow through those places
+
+Flow belongs inside surfaces.
+
+A surface should describe:
+
+* what the user sees there
+* what they are trying to do there
+* what stands out first
+* what actions feel primary
+* what appears, disappears, or becomes contextual
+* where the user can go from there
+
+### What belongs in Surfaces
+
+Good surface details:
+
+* “Dashboard is the main triage surface.”
+* “Users typically start with filters before opening a case.”
+* “The summary panel becomes meaningful after case selection.”
+* “Back appears only inside detail contexts.”
+* “Empty state pushes the user toward first-item creation.”
+
+### What does not belong in Surfaces
+
+Avoid:
+
+* exact DOM detail
+* CSS implementation detail
+* code internals
+* architecture commentary
+* generic product notes that do not describe actual experience
+
+### Example Surface entry
+
+```json
+{
+  "id": "surface_dashboard",
+  "name": "Dashboard",
+  "purpose": "Primary place where the user reviews and progresses active casework.",
+  "primary_user_goal": "triage and update cases",
+  "entry_conditions": ["default app entry"],
+  "key_regions": [
+    "header",
+    "sticky filters bar",
+    "metrics strip",
+    "case board",
+    "summary side panel"
+  ],
+  "natural_user_actions": [
+    "scan metrics",
+    "filter visible work",
+    "open a case",
+    "select cases for summary"
+  ],
+  "flow_notes": [
+    "This is the primary entry surface.",
+    "Users generally interact with filters before deep detail.",
+    "The summary panel becomes secondary until cases are selected."
+  ],
+  "connected_capabilities": [
+    "capability_case_management",
+    "capability_summary_generation",
+    "capability_filtering"
+  ],
+  "connected_surfaces": [
+    "surface_case_detail"
+  ],
+  "related_files": [
+    "public/index.php",
+    "public/assets/app.js",
+    "public/assets/styles.css"
+  ],
+  "state": "active",
+  "confidence": "high",
+  "last_updated": "2026-03-11T12:00:00Z"
+}
+```
+
+---
+
+## Domain 2: Capabilities
+
+### What Capabilities are
+
+Capabilities describe what the system can meaningfully do.
+
+They are not screens and not internal pieces.
+They are the system’s functional powers.
+
+Examples:
+
+* filtering
+* summary generation
+* case movement
+* note editing
+* undo
+* export
+* authentication
+* import
+
+A capability should describe:
+
+* what problem it solves
+* what it enables the user to accomplish
+* what inputs it works from
+* what outputs or state changes it creates
+* where it is surfaced
+* what parts support it
+
+### What belongs in Capabilities
+
+Good capability details:
+
+* “Filtering narrows visible work by program, due window, and query.”
+* “Summary generation transforms selected case state into bounded outputs.”
+* “Undo restores the most recent status move.”
+* “Selection enables downstream actions like summary output.”
+
+### What does not belong in Capabilities
+
+Avoid:
+
+* exact UI placement
+* exact implementation details
+* code symbol names
+* vague aspirational feature language
+
+### Example Capability entry
+
+```json
+{
+  "id": "capability_summary_generation",
+  "name": "Summary Generation",
+  "purpose": "Produces bounded output summaries from selected case state.",
+  "solves": "Lets the user convert multiple selected cases into a structured review or handoff output.",
+  "inputs": [
+    "selected cases",
+    "summary mode",
+    "sensitivity toggle"
+  ],
+  "outputs": [
+    "internal review summary",
+    "backup handoff packet"
+  ],
+  "surfaced_in": [
+    "surface_dashboard",
+    "surface_summary_panel"
+  ],
+  "supported_by_parts": [
+    "part_summary_service",
+    "part_repository"
+  ],
+  "depends_on_capabilities": [
+    "capability_case_selection",
+    "capability_note_editing"
+  ],
+  "related_files": [
+    "src/SummaryService.php",
+    "public/index.php",
+    "public/assets/app.js"
+  ],
+  "state": "active",
+  "confidence": "high",
+  "last_updated": "2026-03-11T12:00:00Z"
+}
+```
+
+---
+
+## Domain 3: Parts
+
+### What Parts are
+
+Parts are the major built pieces that make the project possible.
+
+This includes:
+
+* internal modules
+* high-level services
+* major subsystems
+* important storage/runtime layers
+* important libraries or platforms when structurally relevant
+
+Parts should describe:
+
+* what role a piece plays
+* what it supports
+* what it depends on
+* how it complements other parts
+* what boundary it represents
+
+### What belongs in Parts
+
+Good part details:
+
+* “Repository layer persists and mutates case state.”
+* “Summary service transforms records into bounded outputs.”
+* “React Query supports server-state freshness across data-facing surfaces.”
+* “Supabase supports auth, storage, and persistence.”
+
+### What does not belong in Parts
+
+Avoid:
+
+* function-level detail
+* method names
+* implementation minutiae
+* broad architecture essays
+* everything in the stack all at once
+
+### Example Part entry
+
+```json
+{
+  "id": "part_repository",
+  "name": "Repository Layer",
+  "role": "Loads, persists, and mutates case state using local JSON with file locking.",
+  "boundary": "state persistence",
+  "supports_capabilities": [
+    "capability_case_management",
+    "capability_summary_generation"
+  ],
+  "depends_on_parts": [
+    "part_local_json_store"
+  ],
+  "complements": [
+    "part_summary_service",
+    "part_php_shell"
+  ],
+  "related_files": [
+    "src/Repository.php",
+    "storage/cases.json",
+    "storage/cases.seed.json"
+  ],
+  "state": "active",
+  "confidence": "high",
+  "last_updated": "2026-03-11T12:00:00Z"
+}
+```
+
+---
+
+## Mental model shortcut
+
+When the agent updates Shape, it should ask:
+
+### Surface question
+
+What is the user-facing experience here now?
+
+### Capability question
+
+What can the system now meaningfully do?
+
+### Part question
+
+What major built piece makes that possible?
+
+If the agent cannot answer one of those clearly, the update probably does not belong in Shape.
+
+---
+
+## How Shape should be read
+
+Shape should be read through its own dedicated read tool:
+
+## `forge_shape`
+
+This keeps `forge_load` light.
+
+The agent should use `forge_shape` when it needs:
+
+* the user-facing map
+* the functional map
+* the internal high-level support map
+* one specific shape domain
+* the full structural picture
+
+### Recommended read behavior
+
+Support:
+
+* one domain
+* multiple domains
+* all domains
+
+Support modes:
+
+* `compact`
+* `full`
+
+Default should be `compact`.
+
+### Example read requests
+
+* surfaces only
+* capabilities only
+* parts only
+* surfaces + capabilities
+* full shape
+
+---
+
+## How Shape should be updated
+
+Shape is fully agent-driven.
+
+That means the agent writes and evolves Shape based on its current structural understanding.
+
+This should happen through:
+
+## `forge_update_shape`
+
+This is the dedicated Shape mutation tool.
+
+Use it when:
+
+* a new surface appears
+* a capability is added or materially changes
+* a part appears or changes role
+* the system map changes enough that future sessions would benefit from an updated structural understanding
+
+---
+
+## What counts as a Shape-worthy change
+
+Update Shape when:
+
+* a new user-facing surface appears
+* a flow meaningfully changes
+* a new capability becomes real
+* a capability is materially re-scoped
+* a major part is added, removed, or changes role
+* the project’s current structural form is now different enough that the old map is stale
+
+Do not update Shape for:
+
+* small fixes
+* styling-only tweaks
+* code cleanup
+* issue-only changes
+* phase-only changes
+* ordinary progress notes
+* speculative thoughts with no durable structural consequence
+
+---
+
+## How Shape fits the current Forge workflow
+
+## `forge_load`
+
+Should stay lean.
+
+It may include only:
+
+* shape exists
+* project type
+* shape summary
+* shape last updated
+* confidence
+
+It should not dump the full shape by default.
+
+## `forge_shape`
+
+This is the main Shape read tool.
+
+Use it when:
+
+* starting or resuming work on a complex project
+* structural understanding matters
+* the agent needs to see how the project fits together
+* only a subset of Shape is needed
+
+## `forge_checkpoint`
+
+This remains the main progress-write tool.
+
+It should not become the main Shape read path.
+
+Checkpoint may optionally surface a suggestion like:
+
+* “this looks like a shape-worthy change”
+* “this new capability should be reflected in Shape”
+
+But Shape mutation itself should happen via `forge_update_shape`.
+
+## `forge_update`
+
+This remains the normal precise Forge state mutation tool.
+
+Use it for:
+
+* memory
+* issues
+* drift
+* decisions
+* supersession
+* plan mutation
+
+Do not turn it into the main Shape mutation path.
+
+## `forge_update_shape`
+
+This is the precise structural map mutation tool.
+
+Use it when the project form changed.
+
+---
+
+## How Shape keeps the project clean
+
+Shape keeps structural understanding from getting lost in:
+
+* handoff text
+* progress notes
+* raw files
+* memory entries
+* implicit agent assumptions
+
+It gives the project one dedicated place for:
+
+* user-facing form
+* system capabilities
+* major supporting parts
+
+That helps later sessions orient faster without forcing the agent to reverse-engineer the whole project from raw files every time.
+
+---
+
+## Typical details to include
+
+### In Surfaces
+
+Include:
+
+* entry point
+* what the user sees there
+* what they naturally try first
+* what actions are primary
+* what transitions happen from there
+* what contextually appears/disappears
+* what capability is exposed there
+
+### In Capabilities
+
+Include:
+
+* what user problem is solved
+* what the system lets the user do
+* what the main inputs and outputs are
+* where this is surfaced
+* what parts support it
+
+### In Parts
+
+Include:
+
+* what this major piece is
+* what role it plays
+* what capabilities it supports
+* what it depends on
+* what other parts it complements
+* what major technology or runtime is involved if structurally relevant
+
+---
+
+## Typical details to avoid
+
+Avoid storing:
+
+* exact function names
+* formulas
+* implementation trivia
+* exhaustive file inventories
+* repeated plan facts
+* phase progress
+* issue state
+* long prose narration
+* vague commentary that does not sharpen the structural map
+
+---
+
+## Example mental model
+
+A good Shape should let the agent understand something like this:
+
+* The dashboard is the primary surface.
+* The user triages work there.
+* The summary panel is a secondary surface connected to the dashboard.
+* Filtering, selection, and summary generation are key capabilities.
+* The repository and summary service are major parts supporting those capabilities.
+* The project is arranged so that one main surface drives most work, with supporting capabilities and parts around it.
+
+That is the right level of detail.
+
+---
+
+## Design north star
+
+Forge Shape should help the agent say:
+
+> I understand how this project is currently experienced, what it can do, and what major pieces make that possible.
+
+That is the right scope.
+
+If Shape becomes:
+
+* notes
+* code commentary
+* architecture sprawl
+* reasoning prose
+
+then it has failed.
+
+Shape should remain a **clean structural map**.
+
+Absolutely. Here’s a clean **v1 schema draft** for:
+
+* `shape.json`
+* `forge_shape`
+* `forge_update_shape`
+
+I’m keeping this **lean but expressive**, so it stays useful without turning into a mini database product too early.
+
+---
+
+# `shape.json` — file shape
+
+```json
+{
+  "shape_version": 1,
+  "project_type": "web_app",
+  "summary": "A local-first casework dashboard centered around triage, bounded summary generation, and persistent case status tracking.",
+  "surfaces": [],
+  "capabilities": [],
+  "parts": [],
+  "updated_at": "2026-03-11T12:00:00Z",
+  "confidence": "medium"
+}
+```
+
+## Top-level field meanings
+
+### `shape_version`
+
+Schema version for the Shape file.
+
+### `project_type`
+
+Examples:
+
+* `web_app`
+* `mobile_app`
+* `backend_service`
+* `cli_tool`
+* `library`
+* `game`
+* `research_project`
+* `writing_project`
+
+### `summary`
+
+A short structural description of the project as it currently exists.
+
+### `surfaces`
+
+User-facing or operator-facing areas and outputs.
+
+### `capabilities`
+
+What the project can meaningfully do.
+
+### `parts`
+
+Major built pieces that support the system.
+
+### `updated_at`
+
+Last structural update time.
+
+### `confidence`
+
+How confident the agent is that the current shape map is accurate.
+
+Suggested values:
+
+* `low`
+* `medium`
+* `high`
+
+---
+
+# Entry schemas
+
+## 1. Surface entry
+
+```json
+{
+  "id": "surface_dashboard",
+  "name": "Dashboard",
+  "purpose": "Primary place where the user reviews and progresses active casework.",
+  "primary_user_goal": "triage and update cases",
+  "entry_conditions": ["default app entry"],
+  "key_regions": [
+    "header",
+    "sticky filters bar",
+    "metrics strip",
+    "case board",
+    "summary side panel"
+  ],
+  "natural_user_actions": [
+    "scan metrics",
+    "filter visible work",
+    "open a case",
+    "select cases for summary"
+  ],
+  "flow_notes": [
+    "This is the main landing surface.",
+    "Users typically interact with filters before deep detail.",
+    "The summary panel becomes more useful after case selection."
+  ],
+  "connected_capabilities": [
+    "capability_case_management",
+    "capability_filtering",
+    "capability_summary_generation"
+  ],
+  "connected_surfaces": [
+    "surface_case_detail"
+  ],
+  "related_files": [
+    "public/index.php",
+    "public/assets/app.js",
+    "public/assets/styles.css"
+  ],
+  "state": "active",
+  "confidence": "high",
+  "last_updated": "2026-03-11T12:00:00Z"
+}
+```
+
+## Required fields
+
+* `id`
+* `name`
+* `purpose`
+
+## Recommended optional fields
+
+* `primary_user_goal`
+* `entry_conditions`
+* `key_regions`
+* `natural_user_actions`
+* `flow_notes`
+* `connected_capabilities`
+* `connected_surfaces`
+* `related_files`
+* `state`
+* `confidence`
+* `last_updated`
+
+## Suggested `state` values
+
+* `active`
+* `partial`
+* `planned`
+* `deprecated`
+
+---
+
+## 2. Capability entry
+
+```json
+{
+  "id": "capability_summary_generation",
+  "name": "Summary Generation",
+  "purpose": "Produces bounded output summaries from selected case state.",
+  "solves": "Lets the user convert selected casework into a review or handoff output.",
+  "inputs": [
+    "selected cases",
+    "summary mode",
+    "sensitivity toggle"
+  ],
+  "outputs": [
+    "internal review summary",
+    "backup handoff packet"
+  ],
+  "surfaced_in": [
+    "surface_dashboard",
+    "surface_summary_panel"
+  ],
+  "supported_by_parts": [
+    "part_summary_service",
+    "part_repository"
+  ],
+  "depends_on_capabilities": [
+    "capability_case_selection",
+    "capability_note_editing"
+  ],
+  "related_files": [
+    "src/SummaryService.php",
+    "public/index.php",
+    "public/assets/app.js"
+  ],
+  "state": "active",
+  "confidence": "high",
+  "last_updated": "2026-03-11T12:00:00Z"
+}
+```
+
+## Required fields
+
+* `id`
+* `name`
+* `purpose`
+
+## Recommended optional fields
+
+* `solves`
+* `inputs`
+* `outputs`
+* `surfaced_in`
+* `supported_by_parts`
+* `depends_on_capabilities`
+* `related_files`
+* `state`
+* `confidence`
+* `last_updated`
+
+## Suggested `state` values
+
+* `active`
+* `partial`
+* `planned`
+* `deprecated`
+
+---
+
+## 3. Part entry
+
+```json
+{
+  "id": "part_repository",
+  "name": "Repository Layer",
+  "role": "Loads, persists, and mutates case state using local JSON with file locking.",
+  "boundary": "state persistence",
+  "supports_capabilities": [
+    "capability_case_management",
+    "capability_summary_generation"
+  ],
+  "depends_on_parts": [
+    "part_local_json_store"
+  ],
+  "complements": [
+    "part_summary_service",
+    "part_php_shell"
+  ],
+  "technology_context": [
+    "PHP",
+    "local JSON storage",
+    "file locking"
+  ],
+  "related_files": [
+    "src/Repository.php",
+    "storage/cases.json",
+    "storage/cases.seed.json"
+  ],
+  "state": "active",
+  "confidence": "high",
+  "last_updated": "2026-03-11T12:00:00Z"
+}
+```
+
+## Required fields
+
+* `id`
+* `name`
+* `role`
+
+## Recommended optional fields
+
+* `boundary`
+* `supports_capabilities`
+* `depends_on_parts`
+* `complements`
+* `technology_context`
+* `related_files`
+* `state`
+* `confidence`
+* `last_updated`
+
+## Suggested `state` values
+
+* `active`
+* `partial`
+* `planned`
+* `deprecated`
+
+---
+
+# Tool schema: `forge_shape`
+
+This is the dedicated Shape read tool.
+
+## Purpose
+
+Read:
+
+* one domain
+* multiple domains
+* or the full shape
+
+without forcing `forge_load` to carry the entire structural map.
+
+---
+
+## Input shape
+
+```json
+{
+  "domains": ["surfaces", "capabilities"],
+  "ids": ["surface_dashboard", "capability_summary_generation"],
+  "mode": "compact",
+  "include_summary": true,
+  "include_counts": true
+}
+```
+
+## Field meanings
+
+### `domains`
+
+Optional.
+
+Allowed values:
+
+* `surfaces`
+* `capabilities`
+* `parts`
+
+If omitted, return all three.
+
+### `ids`
+
+Optional.
+
+If present, return only matching entries from the requested domains.
+
+If omitted, return all entries from the requested domains.
+
+### `mode`
+
+Optional.
+
+Allowed values:
+
+* `compact`
+* `full`
+
+Default:
+
+* `compact`
+
+### `include_summary`
+
+Optional boolean.
+Default:
+
+* `true`
+
+### `include_counts`
+
+Optional boolean.
+Default:
+
+* `true`
+
+---
+
+## Compact response shape
+
+```json
+{
+  "shape": true,
+  "shape_version": 1,
+  "project_type": "web_app",
+  "summary": "A local-first casework dashboard centered around triage, bounded summary generation, and persistent case status tracking.",
+  "updated_at": "2026-03-11T12:00:00Z",
+  "confidence": "medium",
+  "counts": {
+    "surfaces": 2,
+    "capabilities": 5,
+    "parts": 4
+  },
+  "domains": {
+    "surfaces": [
+      {
+        "id": "surface_dashboard",
+        "name": "Dashboard",
+        "purpose": "Primary place where the user reviews and progresses active casework.",
+        "primary_user_goal": "triage and update cases",
+        "connected_capabilities": [
+          "capability_case_management",
+          "capability_filtering",
+          "capability_summary_generation"
+        ],
+        "connected_surfaces": [
+          "surface_case_detail"
+        ],
+        "state": "active",
+        "confidence": "high",
+        "last_updated": "2026-03-11T12:00:00Z"
+      }
+    ],
+    "capabilities": [
+      {
+        "id": "capability_summary_generation",
+        "name": "Summary Generation",
+        "purpose": "Produces bounded output summaries from selected case state.",
+        "surfaced_in": [
+          "surface_dashboard",
+          "surface_summary_panel"
+        ],
+        "supported_by_parts": [
+          "part_summary_service",
+          "part_repository"
+        ],
+        "state": "active",
+        "confidence": "high",
+        "last_updated": "2026-03-11T12:00:00Z"
+      }
+    ]
+  },
+  "not_found_ids": []
+}
+```
+
+---
+
+## Full response shape
+
+```json
+{
+  "shape": true,
+  "shape_version": 1,
+  "project_type": "web_app",
+  "summary": "A local-first casework dashboard centered around triage, bounded summary generation, and persistent case status tracking.",
+  "updated_at": "2026-03-11T12:00:00Z",
+  "confidence": "medium",
+  "counts": {
+    "surfaces": 2,
+    "capabilities": 5,
+    "parts": 4
+  },
+  "domains": {
+    "surfaces": [/* full surface objects */],
+    "capabilities": [/* full capability objects */],
+    "parts": [/* full part objects */]
+  },
+  "not_found_ids": []
+}
+```
+
+---
+
+## Not-found response
+
+```json
+{
+  "shape": false,
+  "reason": "shape.json not found for this Forge-managed project"
+}
+```
+
+---
+
+# Tool schema: `forge_update_shape`
+
+This is the dedicated Shape mutation tool.
+
+## Purpose
+
+Make explicit structural updates to:
+
+* `surfaces`
+* `capabilities`
+* `parts`
+
+This is for shape-worthy changes, not tiny edits.
+
+---
+
+## Design choice
+
+I recommend **multi-operation input** so one tool call can update several shape entries at once.
+
+That keeps the tool powerful without multiplying tool calls.
+
+---
+
+## Input shape
+
+```json
+{
+  "ops": [
+    {
+      "domain": "capabilities",
+      "action": "upsert",
+      "entry": {
+        "id": "capability_summary_generation",
+        "name": "Summary Generation",
+        "purpose": "Produces bounded output summaries from selected case state.",
+        "solves": "Lets the user convert selected casework into a review or handoff output.",
+        "surfaced_in": ["surface_dashboard", "surface_summary_panel"],
+        "supported_by_parts": ["part_summary_service", "part_repository"],
+        "state": "active",
+        "confidence": "high"
+      }
+    },
+    {
+      "domain": "shape_meta",
+      "action": "set_summary",
+      "value": "A local-first casework dashboard centered around triage, bounded summary generation, and persistent case status tracking."
+    }
+  ],
+  "note": "Added summary generation as a first-class capability and refreshed project summary."
+}
+```
+
+---
+
+## Supported domains
+
+* `surfaces`
+* `capabilities`
+* `parts`
+* `shape_meta`
+
+---
+
+## Supported actions
+
+### For `surfaces`, `capabilities`, `parts`
+
+* `upsert`
+* `patch`
+* `remove`
+
+### For `shape_meta`
+
+* `set_summary`
+* `set_project_type`
+* `set_confidence`
+
+---
+
+## Operation shapes
+
+### 1. Upsert operation
+
+```json
+{
+  "domain": "surfaces",
+  "action": "upsert",
+  "entry": {
+    "id": "surface_dashboard",
+    "name": "Dashboard",
+    "purpose": "Primary place where the user reviews and progresses active casework."
+  }
+}
+```
+
+Use:
+
+* when creating a new entry
+* or replacing/updating an existing entry with a complete shape object
+
+---
+
+### 2. Patch operation
+
+```json
+{
+  "domain": "capabilities",
+  "action": "patch",
+  "id": "capability_summary_generation",
+  "patch": {
+    "outputs": [
+      "internal review summary",
+      "backup handoff packet"
+    ],
+    "confidence": "high",
+    "state": "active"
+  }
+}
+```
+
+Use:
+
+* when changing only a few fields on an existing entry
+
+---
+
+### 3. Remove operation
+
+```json
+{
+  "domain": "parts",
+  "action": "remove",
+  "id": "part_legacy_renderer"
+}
+```
+
+Use:
+
+* when a shape entry should no longer exist
+
+---
+
+### 4. Shape meta operations
+
+#### Set summary
+
+```json
+{
+  "domain": "shape_meta",
+  "action": "set_summary",
+  "value": "A local-first casework dashboard centered around triage, bounded summary generation, and persistent case status tracking."
+}
+```
+
+#### Set project type
+
+```json
+{
+  "domain": "shape_meta",
+  "action": "set_project_type",
+  "value": "web_app"
+}
+```
+
+#### Set confidence
+
+```json
+{
+  "domain": "shape_meta",
+  "action": "set_confidence",
+  "value": "medium"
+}
+```
+
+---
+
+## Output shape
+
+```json
+{
+  "ok": true,
+  "updated_at": "2026-03-11T12:15:00Z",
+  "applied": [
+    {
+      "domain": "capabilities",
+      "action": "upsert",
+      "id": "capability_summary_generation",
+      "status": "updated"
+    },
+    {
+      "domain": "shape_meta",
+      "action": "set_summary",
+      "status": "updated"
+    }
+  ],
+  "skipped": [],
+  "errors": []
+}
+```
+
+---
+
+## Partial-success output
+
+```json
+{
+  "ok": false,
+  "updated_at": "2026-03-11T12:15:00Z",
+  "applied": [
+    {
+      "domain": "capabilities",
+      "action": "upsert",
+      "id": "capability_summary_generation",
+      "status": "updated"
+    }
+  ],
+  "skipped": [],
+  "errors": [
+    {
+      "domain": "parts",
+      "action": "patch",
+      "id": "part_missing",
+      "reason": "entry not found"
+    }
+  ]
+}
+```
+
+---
+
+# Recommended default behavior rules
+
+## `forge_shape`
+
+Default behavior:
+
+* all domains if none specified
+* `compact` mode if no mode specified
+* include summary and counts by default
+
+## `forge_update_shape`
+
+Default behavior:
+
+* update `updated_at` on every successful write
+* preserve existing `shape_version`
+* patch should fail clearly if the target `id` does not exist
+* upsert should insert or replace by `id`
+* remove should fail clearly if the target `id` does not exist
+
+---
+
+# Example minimal `shape.json`
+
+```json
+{
+  "shape_version": 1,
+  "project_type": "web_app",
+  "summary": "A local-first casework dashboard centered around triage, bounded summary generation, and persistent case status tracking.",
+  "surfaces": [
+    {
+      "id": "surface_dashboard",
+      "name": "Dashboard",
+      "purpose": "Primary place where the user reviews and progresses active casework.",
+      "primary_user_goal": "triage and update cases",
+      "key_regions": [
+        "header",
+        "filters bar",
+        "metrics strip",
+        "case board",
+        "summary panel"
+      ],
+      "natural_user_actions": [
+        "scan metrics",
+        "filter work",
+        "open a case",
+        "select cases for summary"
+      ],
+      "flow_notes": [
+        "This is the main landing surface.",
+        "The summary panel becomes more meaningful after case selection."
+      ],
+      "connected_capabilities": [
+        "capability_case_management",
+        "capability_filtering",
+        "capability_summary_generation"
+      ],
+      "connected_surfaces": [],
+      "related_files": [
+        "public/index.php",
+        "public/assets/app.js",
+        "public/assets/styles.css"
+      ],
+      "state": "active",
+      "confidence": "high",
+      "last_updated": "2026-03-11T12:00:00Z"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "capability_filtering",
+      "name": "Filtering",
+      "purpose": "Narrows visible casework based on user-selected criteria.",
+      "solves": "Helps the user focus on the most relevant work quickly.",
+      "inputs": [
+        "program filter",
+        "sensitivity filter",
+        "due window",
+        "text query"
+      ],
+      "outputs": [
+        "filtered visible case set"
+      ],
+      "surfaced_in": [
+        "surface_dashboard"
+      ],
+      "supported_by_parts": [
+        "part_client_interaction_layer"
+      ],
+      "depends_on_capabilities": [],
+      "related_files": [
+        "public/assets/app.js",
+        "public/index.php"
+      ],
+      "state": "active",
+      "confidence": "high",
+      "last_updated": "2026-03-11T12:00:00Z"
+    },
+    {
+      "id": "capability_summary_generation",
+      "name": "Summary Generation",
+      "purpose": "Produces bounded output summaries from selected case state.",
+      "solves": "Lets the user convert selected casework into a review or handoff output.",
+      "inputs": [
+        "selected cases",
+        "summary mode",
+        "sensitivity toggle"
+      ],
+      "outputs": [
+        "internal review summary",
+        "backup handoff packet"
+      ],
+      "surfaced_in": [
+        "surface_dashboard"
+      ],
+      "supported_by_parts": [
+        "part_summary_service",
+        "part_repository"
+      ],
+      "depends_on_capabilities": [],
+      "related_files": [
+        "src/SummaryService.php",
+        "public/index.php",
+        "public/assets/app.js"
+      ],
+      "state": "active",
+      "confidence": "high",
+      "last_updated": "2026-03-11T12:00:00Z"
+    }
+  ],
+  "parts": [
+    {
+      "id": "part_php_shell",
+      "name": "PHP Shell",
+      "role": "Renders the main page and handles lightweight endpoint routing.",
+      "boundary": "entry and request handling",
+      "supports_capabilities": [
+        "capability_case_management",
+        "capability_summary_generation",
+        "capability_filtering"
+      ],
+      "depends_on_parts": [
+        "part_repository",
+        "part_summary_service"
+      ],
+      "complements": [
+        "part_client_interaction_layer"
+      ],
+      "technology_context": [
+        "PHP"
+      ],
+      "related_files": [
+        "public/index.php"
+      ],
+      "state": "active",
+      "confidence": "high",
+      "last_updated": "2026-03-11T12:00:00Z"
+    },
+    {
+      "id": "part_repository",
+      "name": "Repository Layer",
+      "role": "Loads, persists, and mutates case state using local JSON with file locking.",
+      "boundary": "state persistence",
+      "supports_capabilities": [
+        "capability_case_management",
+        "capability_summary_generation"
+      ],
+      "depends_on_parts": [],
+      "complements": [
+        "part_summary_service",
+        "part_php_shell"
+      ],
+      "technology_context": [
+        "PHP",
+        "local JSON storage",
+        "file locking"
+      ],
+      "related_files": [
+        "src/Repository.php",
+        "storage/cases.json",
+        "storage/cases.seed.json"
+      ],
+      "state": "active",
+      "confidence": "high",
+      "last_updated": "2026-03-11T12:00:00Z"
+    },
+    {
+      "id": "part_summary_service",
+      "name": "Summary Service",
+      "role": "Transforms selected cases into bounded output summaries.",
+      "boundary": "summary transformation",
+      "supports_capabilities": [
+        "capability_summary_generation"
+      ],
+      "depends_on_parts": [
+        "part_repository"
+      ],
+      "complements": [
+        "part_php_shell"
+      ],
+      "technology_context": [
+        "PHP"
+      ],
+      "related_files": [
+        "src/SummaryService.php"
+      ],
+      "state": "active",
+      "confidence": "high",
+      "last_updated": "2026-03-11T12:00:00Z"
+    }
+  ],
+  "updated_at": "2026-03-11T12:00:00Z",
+  "confidence": "medium"
+}
+```
+
+---
+
+# My recommendation on how your AI should implement it
+
+For v1:
+
+* keep `forge_shape` read-only and selective
+* keep `forge_update_shape` explicit and structured
+* do not add extra shape domains
+* do not invent relationship graphs yet
+* do not try to infer shape too aggressively from checkpoint text
+* make Shape easy to read and easy to mutate cleanly
+
+If you want, next I can draft a **second implementation prompt** specifically for these schemas so your AI builds them with less improvisation.
+

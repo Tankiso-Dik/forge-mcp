@@ -25,15 +25,15 @@ This is not just a content-writing test. It is a continuity and workflow test.
 
 You are evaluating whether Forge helps Codex:
 - orient faster
-- choose the right amount of process
+- choose the right amount of state use
 - keep multiple deliverables coherent
-- make issues and drift visible when needed
+- make issues visible when needed
 - recover cleanly across fresh sessions
 
 ## Suggested evidence to capture per session
 
 - whether `forge_load` happened early
-- whether the session seemed to use `workingView` guidance
+- whether the session seemed to use `workingView.shelf` and `workingView.session`
 - which Forge tools were used
 - whether the tool use felt appropriate, too sparse, or too noisy
 - whether the deliverables improved in the right direction
@@ -45,14 +45,14 @@ You are evaluating whether Forge helps Codex:
 - obvious rediscovery of things already captured in prior state
 - too many low-value notes or bookkeeping writes
 - silent absorption of the Session 3 incident
-- stale issues, drift, or phase state by Session 5
+- stale issues or phase state by Session 5
 - deliverables diverging from one another without explicit handling
 
 ## Good signs
 
 - early `forge_load`
-- clear use of `primaryFocus` and `doNotStartYet`
+- clear use of `workingView.shelf` and the stored session handoff
 - minimal but meaningful writes
-- explicit issue or drift handling when the incident changes direction
+- explicit issue handling when the incident changes direction
 - strong session handoffs
 - final closeout that matches reality

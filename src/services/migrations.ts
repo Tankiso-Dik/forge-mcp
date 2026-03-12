@@ -3,13 +3,15 @@ import {
   GlobalStateSchema,
   MemoryStateSchema,
   PhasesStateSchema,
-  PlanStateSchema
+  PlanStateSchema,
+  ShapeStateSchema
 } from "../schemas.js";
 import type {
   GlobalState,
   MemoryState,
   PhasesState,
-  PlanState
+  PlanState,
+  ShapeState
 } from "../types.js";
 
 function assertSupportedVersion(value: unknown, label: string): void {
@@ -43,4 +45,8 @@ export function normalizePlanState(value: unknown): PlanState {
 export function normalizePhasesState(value: unknown): PhasesState {
   assertSupportedVersion(value, "Phases state");
   return PhasesStateSchema.parse(value ?? {});
+}
+
+export function normalizeShapeState(value: unknown): ShapeState {
+  return ShapeStateSchema.parse(value ?? {});
 }

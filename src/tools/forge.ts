@@ -3,56 +3,43 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   ForgeCheckpointInputSchema,
   ForgeCheckpointOutputSchema,
-  ForgeCompareExecutionInputSchema,
-  ForgeCompareExecutionOutputSchema,
-  ForgeFlagDriftInputSchema,
   ForgeInitInputSchema,
   ForgeInitOutputSchema,
   ForgeLoadInputSchema,
   ForgeLoadOutputSchema,
-  ForgeLogInputSchema,
-  ForgeRebuildPhasesInputSchema,
-  ForgeSessionDraftInputSchema,
-  ForgeSessionDraftOutputSchema,
-  ForgeSessionEndInputSchema,
-  ForgeSessionEndOutputSchema,
-  ForgeSuggestUpdateInputSchema,
-  ForgeSuggestUpdateOutputSchema,
-  ForgeStepDoneInputSchema,
+  ForgeShapeReadInputSchema,
+  ForgeShapeReadOutputSchema,
   ForgeUpdateInputSchema,
+  ForgeUpdateShapeInputSchema,
   WriteResultSchema
 } from "../schemas.js";
 import {
-  createEntityId,
-  createContextItem,
-  createDriftRecord,
-  createHabitRecord,
+  createInterpretationRecord,
   createIssueRecord,
-  createObservationRecord,
-  createPromptRecord,
+  createSmartNote,
+  createSupersededConclusion,
+  createContextItem,
   nowIso
 } from "../services/records.js";
 import { initializeForgeProject } from "../services/init.js";
-import { compareExecutionAgainstForge } from "../services/comparison.js";
-import { draftForgeSession, suggestForgeUpdate } from "../services/guidance.js";
-import { appendIssuesAndNicetiesAsked } from "../services/issues-and-niceties.js";
+import { applyShapeDelta, readShapeView } from "../services/shape.js";
 import {
   loadForgeState,
   loadManagedForgeState,
   saveMemoryState,
   savePhasesState,
-  savePlanState
+  savePlanState,
+  saveShapeState
 } from "../services/state.js";
 import type {
   ForgeCheckpointInput,
-  ForgeCompareExecutionInput,
-  ForgeCompareExecutionOutput,
-  ForgeSessionDraftInput,
-  ForgeSessionEndOutput,
-  ForgeSuggestUpdateInput,
+  ForgeLoadOutput,
+  ForgeShapeReadInput,
+  ForgeUpdateShapeInput,
+  IssueStatus,
+  SmartNote,
   ForgeUpdateInput,
   PhaseState,
-  PhasesState,
   WriteResult
 } from "../types.js";
 
@@ -64,12 +51,43 @@ function textResult(value: unknown) {
   return [{ type: "text" as const, text: toTextContent(value) }];
 }
 
-function createWriteResult(result: WriteResult): WriteResult {
-  return WriteResultSchema.parse(result);
+function forgeLoadTextResult(value: ForgeLoadOutput) {
+  const compact = {
+    managedProject: value.managedProject,
+    cwd: value.cwd,
+    projectRoot: value.projectRoot,
+    forgeDirectory: value.forgeDirectory,
+    mode: value.mode,
+    shelf: value.workingView?.shelf ?? null,
+    session: value.workingView?.session ?? null,
+    shape: value.shapeMeta ?? null,
+    rawStateIncluded:
+      value.mode === "full"
+        ? {
+            memory: value.memory !== null,
+            plan: value.plan !== null,
+            phases: value.phases !== null
+          }
+        : null
+  };
+
+  return [{ type: "text" as const, text: toTextContent(compact) }];
 }
 
-function createSessionEndResult(result: ForgeSessionEndOutput): ForgeSessionEndOutput {
-  return ForgeSessionEndOutputSchema.parse(result);
+function forgeShapeTextResult(value: ReturnType<typeof readShapeView>) {
+  const compact = {
+    projectRoot: value.projectRoot,
+    mode: value.mode,
+    domains: value.domains,
+    meta: value.meta,
+    shape: value.shape
+  };
+
+  return [{ type: "text" as const, text: toTextContent(compact) }];
+}
+
+function createWriteResult(result: WriteResult): WriteResult {
+  return WriteResultSchema.parse(result);
 }
 
 function addUniqueValue(values: string[], value: string): boolean {
@@ -81,62 +99,52 @@ function addUniqueValue(values: string[], value: string): boolean {
   return true;
 }
 
-function getDriftRecommendation(severity: WriteResult["severity"]): string {
-  switch (severity) {
-    case "critical":
-      return "Stop and resolve the contradiction before continuing implementation.";
-    case "high":
-      return "Escalate the conflict and confirm whether the plan or architecture has changed.";
-    case "medium":
-      return "Record the conflict and revisit the relevant plan or decision before the next major change.";
-    case "low":
+function issueStatusMessage(status: IssueStatus): string {
+  switch (status) {
+    case "narrowed":
+      return "narrowed";
+    case "transformed":
+      return "transformed";
+    case "dormant":
+      return "parked";
     default:
-      return "Track the drift and monitor whether it becomes a repeated pattern.";
+      return status;
   }
 }
 
-function issueStatusMessage(status: "open" | "resolved"): string {
-  return status === "resolved" ? "resolved" : "reopened";
-}
+function createCheckpointNoteRecord(input: {
+  kind: SmartNote["kind"];
+  text: string;
+  keywords: string[] | undefined;
+  scope: SmartNote["scope"] | undefined;
+  confidence: SmartNote["confidence"] | undefined;
+  relatedFiles?: string[];
+  status: SmartNote["status"] | undefined;
+  source: SmartNote["source"] | undefined;
+}): SmartNote {
+  const payload = {
+    kind: input.kind,
+    text: input.text,
+    relatedFiles: input.relatedFiles ?? [],
+    ...(input.keywords ? { keywords: input.keywords } : {}),
+    ...(input.scope ? { scope: input.scope } : {}),
+    ...(input.confidence ? { confidence: input.confidence } : {}),
+    ...(input.status ? { status: input.status } : {}),
+    ...(input.source ? { source: input.source } : {})
+  };
 
-function validatePhaseIds(phases: PhaseState[]): void {
-  const phaseIds = new Set<string>();
-
-  for (const phase of phases) {
-    if (phaseIds.has(phase.id)) {
-      throw new Error(`Duplicate phase ID detected: ${phase.id}`);
-    }
-    phaseIds.add(phase.id);
-
-    const stepIds = new Set<string>();
-    for (const step of phase.steps) {
-      if (stepIds.has(step.id)) {
-        throw new Error(`Duplicate step ID detected in phase ${phase.id}: ${step.id}`);
-      }
-      stepIds.add(step.id);
-    }
-  }
-}
-
-function recalculatePhaseStatus(phase: PhaseState): PhaseState["status"] {
-  if (phase.steps.length === 0) {
-    return phase.status;
-  }
-
-  if (phase.steps.every((step) => step.status === "done")) {
-    return "done";
-  }
-
-  if (phase.steps.some((step) => step.status === "in_progress" || step.status === "done")) {
-    return "in_progress";
-  }
-
-  return "todo";
+  return createSmartNote({
+    ...payload,
+    keywords: input.keywords ?? [],
+    source: input.source ?? "checkpoint"
+  });
 }
 
 interface ManagedForgeStateForMutation {
   memory: Awaited<ReturnType<typeof loadManagedForgeState>>["memory"];
+  plan: Awaited<ReturnType<typeof loadManagedForgeState>>["plan"];
   phases: Awaited<ReturnType<typeof loadManagedForgeState>>["phases"];
+  shape: Awaited<ReturnType<typeof loadManagedForgeState>>["shape"];
 }
 
 interface StepCompletionResult {
@@ -145,40 +153,38 @@ interface StepCompletionResult {
   message: string;
 }
 
-function applyForgeLogMutation(
+function derivePhaseStatus(phase: PhaseState): PhaseState["status"] {
+  if (phase.steps.length === 0) {
+    return phase.status;
+  }
+
+  const doneCount = phase.steps.filter((entry) => entry.status === "done").length;
+  if (doneCount === 0) {
+    return "todo";
+  }
+  if (doneCount === phase.steps.length) {
+    return "done";
+  }
+  return "in_progress";
+}
+
+function applyCheckpointSummaryMutation(
   state: ManagedForgeStateForMutation,
-  kind: ForgeCheckpointInput["log"] extends infer T
-    ? T extends { kind: infer K }
-      ? K
-      : never
-    : never,
   summary: string,
   detail?: string,
   relatedFiles: string[] = []
 ): { message: string; entityId: string } {
-  if (kind === "habit_suggestion") {
-    const habit = createHabitRecord(detail ?? summary, "suggested");
-    state.memory.habits.push(habit);
-    return {
-      message: `Logged habit suggestion '${detail ?? summary}'.`,
-      entityId: habit.id
-    };
-  }
-
-  if (kind === "concern") {
-    const concern = createContextItem("concern", summary, detail ?? summary, relatedFiles);
-    state.memory.concerns.push(concern);
-    return {
-      message: `Logged concern '${summary}'.`,
-      entityId: concern.id
-    };
-  }
-
-  const observation = createObservationRecord(kind, summary, detail, relatedFiles);
-  state.memory.observations.push(observation);
+  const note = createSmartNote({
+    kind: "milestone",
+    text: detail ? `${summary}\n\n${detail}` : summary,
+    scope: "session",
+    source: "checkpoint",
+    relatedFiles
+  });
+  state.memory.notes.push(note);
   return {
-    message: `Logged ${kind} observation '${summary}'.`,
-    entityId: observation.id
+    message: `Logged checkpoint summary '${summary}'.`,
+    entityId: note.id
   };
 }
 
@@ -202,12 +208,12 @@ function applyStepDoneMutation(
   if (note) {
     step.notes = note;
   }
-  phase.status = recalculatePhaseStatus(phase);
+  phase.status = derivePhaseStatus(phase);
 
   return {
     phaseId: phase.id,
     stepId: step.id,
-    message: `Marked step '${step.title}' as done.`
+    message: `Marked step '${step.title}' as done and set phase '${phase.title}' to ${phase.status}.`
   };
 }
 
@@ -221,7 +227,7 @@ function applySessionMutation(
     nextStep: nextStep ?? state.memory.session.nextStep,
     previousUpdatedAt: state.memory.session.updatedAt,
     updatedAt: nowIso()
-  };
+    };
 }
 
 async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> {
@@ -230,6 +236,78 @@ async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> 
   switch (input.domain) {
     case "memory": {
       switch (input.action) {
+        case "add_note": {
+          const note = createCheckpointNoteRecord({
+            kind: input.note.kind,
+            text: input.note.text,
+            keywords: input.note.keywords,
+            scope: input.note.scope,
+            confidence: input.note.confidence,
+            relatedFiles: input.note.relatedFiles ?? [],
+            status: input.note.status,
+            source: "update"
+          });
+          state.memory.notes.push(note);
+          await saveMemoryState(state.paths.memoryFilePath, state.memory);
+          return createWriteResult({
+            status: "ok",
+            tool: "forge_update",
+            updatedFile: "memory",
+            message: `Added ${note.kind} note.`,
+            entityId: note.id
+          });
+        }
+        case "update_note": {
+          const note = state.memory.notes.find((entry) => entry.id === input.id);
+          if (!note) {
+            throw new Error(`Note '${input.id}' was not found.`);
+          }
+
+          if (input.text) {
+            note.text = input.text;
+          }
+          if (input.keywords) {
+            note.keywords = input.keywords;
+          }
+          if (input.scope) {
+            note.scope = input.scope;
+          }
+          if (input.confidence) {
+            note.confidence = input.confidence;
+          }
+          if (input.status) {
+            note.status = input.status;
+          }
+          if (input.relatedFiles) {
+            note.relatedFiles = input.relatedFiles;
+          }
+          note.updatedAt = nowIso();
+
+          await saveMemoryState(state.paths.memoryFilePath, state.memory);
+          return createWriteResult({
+            status: "ok",
+            tool: "forge_update",
+            updatedFile: "memory",
+            message: `Updated ${note.kind} note.`,
+            entityId: note.id
+          });
+        }
+        case "set_note_status": {
+          const note = state.memory.notes.find((entry) => entry.id === input.id);
+          if (!note) {
+            throw new Error(`Note '${input.id}' was not found.`);
+          }
+          note.status = input.status;
+          note.updatedAt = nowIso();
+          await saveMemoryState(state.paths.memoryFilePath, state.memory);
+          return createWriteResult({
+            status: "ok",
+            tool: "forge_update",
+            updatedFile: "memory",
+            message: `Set ${note.kind} note to ${input.status}.`,
+            entityId: note.id
+          });
+        }
         case "add_decision": {
           const item = createContextItem("decision", input.title, input.detail, input.relatedFiles ?? []);
           state.memory.decisions.push(item);
@@ -254,28 +332,66 @@ async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> 
             entityId: item.id
           });
         }
-        case "add_concern": {
-          const item = createContextItem("concern", input.title, input.detail, input.relatedFiles ?? []);
-          state.memory.concerns.push(item);
+        case "add_interpretation": {
+          const item = createInterpretationRecord({
+            title: input.title,
+            detail: input.detail,
+            status: input.status,
+            confidence: input.confidence,
+            ...(input.basis ? { basis: input.basis } : {}),
+            ...(input.supersedes ? { supersedes: input.supersedes } : {}),
+            relatedFiles: input.relatedFiles ?? []
+          });
+          state.memory.interpretations.push(item);
           await saveMemoryState(state.paths.memoryFilePath, state.memory);
           return createWriteResult({
             status: "ok",
             tool: "forge_update",
             updatedFile: "memory",
-            message: `Added concern '${input.title}'.`,
+            message: `Added interpretation '${input.title}'.`,
             entityId: item.id
           });
         }
-        case "add_favourite_prompt": {
-          const record = createPromptRecord(input.title, input.prompt, input.relatedFiles ?? []);
-          state.memory.favouritePrompts.push(record);
+        case "set_interpretation_status": {
+          const interpretation = state.memory.interpretations.find((entry) => entry.id === input.id);
+          if (!interpretation) {
+            throw new Error(`Interpretation '${input.id}' was not found.`);
+          }
+
+          interpretation.status = input.status;
+          interpretation.updatedAt = nowIso();
+          if (input.confidence) {
+            interpretation.confidence = input.confidence;
+          }
+          if (input.detail) {
+            interpretation.detail = input.detail;
+          }
+
           await saveMemoryState(state.paths.memoryFilePath, state.memory);
           return createWriteResult({
             status: "ok",
             tool: "forge_update",
             updatedFile: "memory",
-            message: `Added favourite prompt '${input.title}'.`,
-            entityId: record.id
+            message: `Set interpretation '${interpretation.title}' to ${input.status}.`,
+            entityId: interpretation.id
+          });
+        }
+        case "add_superseded_conclusion": {
+          const item = createSupersededConclusion({
+            title: input.title,
+            oldStatus: input.oldStatus,
+            reason: input.reason,
+            ...(input.replacement ? { replacement: input.replacement } : {}),
+            relatedFiles: input.relatedFiles ?? []
+          });
+          state.memory.supersededConclusions.push(item);
+          await saveMemoryState(state.paths.memoryFilePath, state.memory);
+          return createWriteResult({
+            status: "ok",
+            tool: "forge_update",
+            updatedFile: "memory",
+            message: `Added superseded conclusion '${input.title}'.`,
+            entityId: item.id
           });
         }
         case "upsert_issue": {
@@ -291,11 +407,19 @@ async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> 
               title: input.title,
               status: input.status,
               updatedAt: nowIso(),
+              transformedInto: existing.transformedInto ?? [],
               relatedFiles: input.relatedFiles ?? existing.relatedFiles ?? []
             };
             if (input.detail) {
               state.memory.issues[existingIndex]!.detail = input.detail;
             }
+            if (input.transformedInto) {
+              state.memory.issues[existingIndex]!.transformedInto = input.transformedInto;
+            }
+            if (input.nextCheck) {
+              state.memory.issues[existingIndex]!.nextCheck = input.nextCheck;
+            }
+            state.memory.issues[existingIndex]!.lastReassessedAt = nowIso();
 
             await saveMemoryState(state.paths.memoryFilePath, state.memory);
             return createWriteResult({
@@ -314,6 +438,13 @@ async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> 
             input.id,
             input.relatedFiles ?? []
           );
+          if (input.transformedInto) {
+            issue.transformedInto = input.transformedInto;
+          }
+          if (input.nextCheck) {
+            issue.nextCheck = input.nextCheck;
+          }
+          issue.lastReassessedAt = nowIso();
           state.memory.issues.push(issue);
           await saveMemoryState(state.paths.memoryFilePath, state.memory);
           return createWriteResult({
@@ -332,8 +463,18 @@ async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> 
 
           issue.status = input.status;
           issue.updatedAt = nowIso();
+          issue.lastReassessedAt = issue.updatedAt;
           if (input.detail) {
             issue.detail = input.detail;
+          }
+          if (input.resolutionNote) {
+            issue.resolutionNote = input.resolutionNote;
+          }
+          if (input.transformedInto) {
+            issue.transformedInto = input.transformedInto;
+          }
+          if (input.nextCheck) {
+            issue.nextCheck = input.nextCheck;
           }
           if (input.status === "resolved") {
             issue.resolvedAt = nowIso();
@@ -351,79 +492,6 @@ async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> 
             entityId: issue.id
           });
         }
-        case "resolve_issue": {
-          const issue = state.memory.issues.find((entry) => entry.id === input.id);
-          if (!issue) {
-            throw new Error(`Issue '${input.id}' was not found.`);
-          }
-
-          issue.status = "resolved";
-          issue.resolution = input.resolution;
-          issue.resolvedAt = nowIso();
-          issue.updatedAt = issue.resolvedAt;
-
-          await saveMemoryState(state.paths.memoryFilePath, state.memory);
-          return createWriteResult({
-            status: "ok",
-            tool: "forge_update",
-            updatedFile: "memory",
-            message: `Resolved issue '${issue.title}'.`,
-            entityId: issue.id
-          });
-        }
-        case "reopen_issue": {
-          const issue = state.memory.issues.find((entry) => entry.id === input.id);
-          if (!issue) {
-            throw new Error(`Issue '${input.id}' was not found.`);
-          }
-
-          issue.status = "open";
-          issue.updatedAt = nowIso();
-          if (input.detail) {
-            issue.detail = input.detail;
-          }
-          delete issue.resolution;
-          delete issue.resolvedAt;
-
-          await saveMemoryState(state.paths.memoryFilePath, state.memory);
-          return createWriteResult({
-            status: "ok",
-            tool: "forge_update",
-            updatedFile: "memory",
-            message: `Reopened issue '${issue.title}'.`,
-            entityId: issue.id
-          });
-        }
-        case "add_habit": {
-          const habit = createHabitRecord(input.description, input.status);
-          state.memory.habits.push(habit);
-          await saveMemoryState(state.paths.memoryFilePath, state.memory);
-          return createWriteResult({
-            status: "ok",
-            tool: "forge_update",
-            updatedFile: "memory",
-            message: `Added habit record '${input.description}'.`,
-            entityId: habit.id
-          });
-        }
-        case "set_habit_status": {
-          const habit = state.memory.habits.find((entry) => entry.id === input.id);
-          if (!habit) {
-            throw new Error(`Habit '${input.id}' was not found.`);
-          }
-
-          habit.status = input.status;
-          habit.updatedAt = nowIso();
-
-          await saveMemoryState(state.paths.memoryFilePath, state.memory);
-          return createWriteResult({
-            status: "ok",
-            tool: "forge_update",
-            updatedFile: "memory",
-            message: `Set habit '${habit.description}' to ${input.status}.`,
-            entityId: habit.id
-          });
-        }
         case "set_session_context": {
           state.memory.session = {
             summary: input.summary ?? state.memory.session.summary,
@@ -438,30 +506,6 @@ async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> 
             tool: "forge_update",
             updatedFile: "memory",
             message: "Updated session context."
-          });
-        }
-        case "set_drift_status": {
-          const drift = state.memory.driftLog.find((entry) => entry.id === input.id);
-          if (!drift) {
-            throw new Error(`Drift record '${input.id}' was not found.`);
-          }
-
-          drift.status = input.status;
-          drift.updatedAt = nowIso();
-          if (input.note) {
-            drift.detail = input.note;
-          }
-
-          await saveMemoryState(state.paths.memoryFilePath, state.memory);
-          return createWriteResult({
-            status: "ok",
-            tool: "forge_update",
-            updatedFile: "memory",
-            message: `Set drift '${drift.summary}' to ${input.status}.`,
-            entityId: drift.id,
-            severity: drift.severity,
-            recommendedAction: drift.recommendedAction,
-            requiresAttention: drift.requiresAttention && input.status !== "resolved"
           });
         }
       }
@@ -530,18 +574,6 @@ async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> 
             entityId: item.id
           });
         }
-        case "add_accepted_suggestion": {
-          const item = createContextItem("suggestion", input.title, input.detail, input.relatedFiles ?? []);
-          state.plan.acceptedSuggestions.push(item);
-          await savePlanState(state.paths.planFilePath, state.plan);
-          return createWriteResult({
-            status: "ok",
-            tool: "forge_update",
-            updatedFile: "plan",
-            message: `Added accepted suggestion '${input.title}'.`,
-            entityId: item.id
-          });
-        }
       }
 
       break;
@@ -573,25 +605,98 @@ async function handleForgeUpdate(input: ForgeUpdateInput): Promise<WriteResult> 
   throw new Error("Unsupported forge_update action.");
 }
 
+async function handleForgeShapeRead(input: ForgeShapeReadInput) {
+  const state = await loadManagedForgeState(input.cwd ?? process.cwd());
+  return readShapeView({
+    projectRoot: state.location.projectRoot,
+    shape: state.shape,
+    domains: input.domains ?? ["surfaces", "capabilities", "parts"],
+    mode: input.mode
+  });
+}
+
+async function handleForgeUpdateShape(input: ForgeUpdateShapeInput): Promise<WriteResult> {
+  const state = await loadManagedForgeState(input.cwd ?? process.cwd());
+  let messages: string[] = [];
+
+  switch (input.action) {
+    case "set_summary":
+      messages = applyShapeDelta(state.shape, { summary: input.summary });
+      break;
+    case "set_project_type":
+      messages = applyShapeDelta(state.shape, { projectType: input.projectType });
+      break;
+    case "set_confidence":
+      messages = applyShapeDelta(state.shape, { confidence: input.confidence });
+      break;
+    case "upsert_surface":
+      messages = applyShapeDelta(state.shape, { surfaces: [input.surface] });
+      break;
+    case "remove_surface":
+      messages = applyShapeDelta(state.shape, { remove: [{ domain: "surfaces", id: input.id }] });
+      break;
+    case "upsert_capability":
+      messages = applyShapeDelta(state.shape, { capabilities: [input.capability] });
+      break;
+    case "remove_capability":
+      messages = applyShapeDelta(state.shape, { remove: [{ domain: "capabilities", id: input.id }] });
+      break;
+    case "upsert_part":
+      messages = applyShapeDelta(state.shape, { parts: [input.part] });
+      break;
+    case "remove_part":
+      messages = applyShapeDelta(state.shape, { remove: [{ domain: "parts", id: input.id }] });
+      break;
+  }
+
+  await saveShapeState(state.paths.shapeFilePath, state.shape);
+
+  return createWriteResult({
+    status: "ok",
+    tool: "forge_update_shape",
+    updatedFile: "shape",
+    message: messages.join(" ")
+  });
+}
+
 async function handleForgeCheckpoint(input: ForgeCheckpointInput) {
   const state = await loadManagedForgeState(input.cwd ?? process.cwd());
-  const updatedFiles = new Set<"memory" | "phases">();
+  const updatedFiles = new Set<"memory" | "plan" | "phases" | "shape">();
   const completedSteps: Array<{ phaseId: string; stepId: string }> = [];
   const messageParts: string[] = [];
-  let loggedEntityId: string | undefined;
+  let entryId: string | undefined;
+  let noteId: string | undefined;
   let sessionUpdated = false;
+  let sessionClosed = false;
+  let shapeUpdated = false;
 
-  if (input.log) {
-    const result = applyForgeLogMutation(
+  if (input.summary) {
+    const result = applyCheckpointSummaryMutation(
       state,
-      input.log.kind,
-      input.log.summary,
-      input.log.detail,
-      input.log.relatedFiles ?? []
+      input.summary.summary,
+      input.summary.detail,
+      input.summary.relatedFiles ?? []
     );
     updatedFiles.add("memory");
-    loggedEntityId = result.entityId;
+    entryId = result.entityId;
     messageParts.push(result.message);
+  }
+
+  if (input.note) {
+    const note = createCheckpointNoteRecord({
+      kind: input.note.kind,
+      text: input.note.text,
+      keywords: input.note.keywords,
+      scope: input.note.scope,
+      confidence: input.note.confidence,
+      relatedFiles: input.note.relatedFiles ?? [],
+      status: input.note.status,
+      source: "checkpoint"
+    });
+    state.memory.notes.push(note);
+    updatedFiles.add("memory");
+    noteId = note.id;
+    messageParts.push(`Stored ${note.kind} note.`);
   }
 
   if (input.completedSteps) {
@@ -606,18 +711,38 @@ async function handleForgeCheckpoint(input: ForgeCheckpointInput) {
     }
   }
 
+  if (input.shape) {
+    const messages = applyShapeDelta(state.shape, {
+      ...(input.shape.summary ? { summary: input.shape.summary } : {}),
+      ...(input.shape.projectType ? { projectType: input.shape.projectType } : {}),
+      ...(input.shape.confidence ? { confidence: input.shape.confidence } : {})
+    });
+    if (messages.length > 0) {
+      updatedFiles.add("shape");
+      shapeUpdated = true;
+      messageParts.push(...messages);
+    }
+  }
+
   if (input.session) {
     applySessionMutation(state, input.session.summary, input.session.nextStep);
     updatedFiles.add("memory");
     sessionUpdated = true;
-    messageParts.push("Updated session handoff.");
+    sessionClosed = input.closeSession;
+    messageParts.push(input.closeSession ? "Updated session handoff and closed the current milestone." : "Updated session handoff.");
   }
 
   if (updatedFiles.has("memory")) {
     await saveMemoryState(state.paths.memoryFilePath, state.memory);
   }
+  if (updatedFiles.has("plan")) {
+    await savePlanState(state.paths.planFilePath, state.plan);
+  }
   if (updatedFiles.has("phases")) {
     await savePhasesState(state.paths.phasesFilePath, state.phases);
+  }
+  if (updatedFiles.has("shape")) {
+    await saveShapeState(state.paths.shapeFilePath, state.shape);
   }
 
   return ForgeCheckpointOutputSchema.parse({
@@ -625,25 +750,13 @@ async function handleForgeCheckpoint(input: ForgeCheckpointInput) {
     tool: "forge_checkpoint",
     updatedFiles: [...updatedFiles],
     message: messageParts.join(" "),
-    loggedEntityId,
+    ...(entryId ? { entryId } : {}),
+    ...(noteId ? { noteId } : {}),
     completedSteps,
-    sessionUpdated
+    sessionUpdated,
+    sessionClosed,
+    shapeUpdated
   });
-}
-
-async function handleForgeSuggestUpdate(input: ForgeSuggestUpdateInput) {
-  const state = await loadManagedForgeState(input.cwd ?? process.cwd());
-  return ForgeSuggestUpdateOutputSchema.parse(suggestForgeUpdate(state, input));
-}
-
-async function handleForgeSessionDraft(input: ForgeSessionDraftInput) {
-  const state = await loadManagedForgeState(input.cwd ?? process.cwd());
-  return ForgeSessionDraftOutputSchema.parse(draftForgeSession(state, input));
-}
-
-async function handleForgeCompareExecution(input: ForgeCompareExecutionInput) {
-  const state = await loadManagedForgeState(input.cwd ?? process.cwd());
-  return ForgeCompareExecutionOutputSchema.parse(compareExecutionAgainstForge(state, input));
 }
 
 export function registerForgeTools(server: McpServer): void {
@@ -652,7 +765,7 @@ export function registerForgeTools(server: McpServer): void {
     {
       title: "Forge Init",
       description:
-        "Initialize a Forge-managed project in the target directory by creating .forge and seeding the local state files.",
+        "Initialize a Forge-managed project in the target directory by creating .forge and seeding the local state files. Use this once before the normal Forge loop when a project is not managed yet; after init, the expected flow is forge_load -> work -> forge_checkpoint, with forge_update only for exact corrections.",
       inputSchema: ForgeInitInputSchema,
       outputSchema: ForgeInitOutputSchema,
       annotations: {
@@ -677,34 +790,34 @@ export function registerForgeTools(server: McpServer): void {
     {
       title: "Forge Load",
       description:
-        "Discover the active Forge project and load the current global, memory, plan, and phases state, auto-bootstrapping the current directory when needed outside the exact home directory.",
+        "Read the active Forge project and load its lean continuity shelf plus current handoff. This is the normal first Forge call in a managed project: start sessions here before broad file reading, use compact mode by default, and reach for full mode only when you explicitly need raw plan, memory, or phases.",
       inputSchema: ForgeLoadInputSchema,
       outputSchema: ForgeLoadOutputSchema,
       annotations: {
-        readOnlyHint: false,
+        readOnlyHint: true,
         destructiveHint: false,
-        idempotentHint: false,
+        idempotentHint: true,
         openWorldHint: false
       }
     },
-    async ({ cwd }) => {
-      const output = await loadForgeState(cwd ?? process.cwd());
+    async ({ cwd, mode }) => {
+      const output = await loadForgeState(cwd ?? process.cwd(), mode);
 
       return {
-        content: textResult(output),
+        content: forgeLoadTextResult(output),
         structuredContent: output
       };
     }
   );
 
   server.registerTool(
-    "forge_compare_execution",
+    "forge_shape",
     {
-      title: "Forge Compare Execution",
+      title: "Forge Shape",
       description:
-        "Compare the observed execution path against Forge decisions, architecture, active phases, issues, and drift.",
-      inputSchema: ForgeCompareExecutionInputSchema,
-      outputSchema: ForgeCompareExecutionOutputSchema,
+        "Read the project's current structural map from .forge/shape.json. Use this after forge_load when the project has a real durable map worth preserving: major surfaces or outputs, capabilities, and parts that fit together across a larger app, multi-document workflow, or research workspace.",
+      inputSchema: ForgeShapeReadInputSchema,
+      outputSchema: ForgeShapeReadOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -713,60 +826,10 @@ export function registerForgeTools(server: McpServer): void {
       }
     },
     async (input) => {
-      const output = await handleForgeCompareExecution(input);
+      const output = await handleForgeShapeRead(input);
 
       return {
-        content: textResult(output),
-        structuredContent: output
-      };
-    }
-  );
-
-  server.registerTool(
-    "forge_suggest_update",
-    {
-      title: "Forge Suggest Update",
-      description:
-        "Recommend whether a new event should become a log, structured update, drift record, checkpoint, or no Forge write at all.",
-      inputSchema: ForgeSuggestUpdateInputSchema,
-      outputSchema: ForgeSuggestUpdateOutputSchema,
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: false
-      }
-    },
-    async (input) => {
-      const output = await handleForgeSuggestUpdate(input);
-
-      return {
-        content: textResult(output),
-        structuredContent: output
-      };
-    }
-  );
-
-  server.registerTool(
-    "forge_session_draft",
-    {
-      title: "Forge Session Draft",
-      description:
-        "Draft a closeout summary, next step, and recommended closeout payload from the current Forge state.",
-      inputSchema: ForgeSessionDraftInputSchema,
-      outputSchema: ForgeSessionDraftOutputSchema,
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: false
-      }
-    },
-    async (input) => {
-      const output = await handleForgeSessionDraft(input);
-
-      return {
-        content: textResult(output),
+        content: forgeShapeTextResult(output),
         structuredContent: output
       };
     }
@@ -777,7 +840,7 @@ export function registerForgeTools(server: McpServer): void {
     {
       title: "Forge Update",
       description:
-        "Apply a structured update to Forge memory, plan, or phases using typed domain actions.",
+        "Apply a precise structured update to Forge memory, plan, or phases using typed domain actions. This is the exact-correction path, not the default session loop: use it after forge_load when you know exactly what state should change and forge_checkpoint would be too broad.",
       inputSchema: ForgeUpdateInputSchema,
       outputSchema: WriteResultSchema,
       annotations: {
@@ -798,12 +861,12 @@ export function registerForgeTools(server: McpServer): void {
   );
 
   server.registerTool(
-    "forge_log",
+    "forge_update_shape",
     {
-      title: "Forge Log",
+      title: "Forge Update Shape",
       description:
-        "Record a quick project observation, concern, or habit suggestion in project memory.",
-      inputSchema: ForgeLogInputSchema,
+        "Apply a precise structured mutation to the project's Shape file for surfaces, capabilities, parts, or top-level shape metadata when the project's current form changed in a durable way. Use it after forge_shape when the structural map needs an exact edit; do not use it for ordinary notes or session continuity.",
+      inputSchema: ForgeUpdateShapeInputSchema,
       outputSchema: WriteResultSchema,
       annotations: {
         readOnlyHint: false,
@@ -812,53 +875,8 @@ export function registerForgeTools(server: McpServer): void {
         openWorldHint: false
       }
     },
-    async ({ cwd, kind, summary, detail, relatedFiles }) => {
-      const state = await loadManagedForgeState(cwd ?? process.cwd());
-      const result = applyForgeLogMutation(state, kind, summary, detail, relatedFiles ?? []);
-      await saveMemoryState(state.paths.memoryFilePath, state.memory);
-
-      const output = createWriteResult({
-        status: "ok",
-        tool: "forge_log",
-        updatedFile: "memory",
-        message: result.message,
-        entityId: result.entityId
-      });
-
-      return {
-        content: textResult(output),
-        structuredContent: output
-      };
-    }
-  );
-
-  server.registerTool(
-    "forge_step_done",
-    {
-      title: "Forge Step Done",
-      description: "Mark a phase step as done and roll up the parent phase status.",
-      inputSchema: ForgeStepDoneInputSchema,
-      outputSchema: WriteResultSchema,
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        idempotentHint: false,
-        openWorldHint: false
-      }
-    },
-    async ({ cwd, phaseId, stepId, note }) => {
-      const state = await loadManagedForgeState(cwd ?? process.cwd());
-      const result = applyStepDoneMutation(state, phaseId, stepId, note);
-      await savePhasesState(state.paths.phasesFilePath, state.phases);
-
-      const output = createWriteResult({
-        status: "ok",
-        tool: "forge_step_done",
-        updatedFile: "phases",
-        message: result.message,
-        phaseId: result.phaseId,
-        stepId: result.stepId
-      });
+    async (input) => {
+      const output = await handleForgeUpdateShape(input);
 
       return {
         content: textResult(output),
@@ -872,7 +890,7 @@ export function registerForgeTools(server: McpServer): void {
     {
       title: "Forge Checkpoint",
       description:
-        "Apply a lightweight continuity checkpoint by optionally logging one note, completing one or more steps, and updating the session handoff in a single call.",
+        "Store one milestone update without ceremony: optional summary, optional typed note, completed steps, session handoff, and optional lightweight Shape metadata in one lean checkpoint write. Use this for closeout and continuity. For structural Shape edits to surfaces, capabilities, or parts, read with forge_shape and write with forge_update_shape instead of embedding structure in forge_checkpoint.",
       inputSchema: ForgeCheckpointInputSchema,
       outputSchema: ForgeCheckpointOutputSchema,
       annotations: {
@@ -884,148 +902,6 @@ export function registerForgeTools(server: McpServer): void {
     },
     async (input) => {
       const output = await handleForgeCheckpoint(input);
-
-      return {
-        content: textResult(output),
-        structuredContent: output
-      };
-    }
-  );
-
-  server.registerTool(
-    "forge_rebuild_phases",
-    {
-      title: "Forge Rebuild Phases",
-      description: "Replace the current project phases with a new validated phase sequence.",
-      inputSchema: ForgeRebuildPhasesInputSchema,
-      outputSchema: WriteResultSchema,
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        idempotentHint: false,
-        openWorldHint: false
-      }
-    },
-    async ({ cwd, phases }) => {
-      validatePhaseIds(phases);
-
-      const state = await loadManagedForgeState(cwd ?? process.cwd());
-      const nextState: PhasesState = {
-        ...state.phases,
-        phases: phases.map((phase) => ({
-          ...phase,
-          status: recalculatePhaseStatus(phase)
-        }))
-      };
-
-      await savePhasesState(state.paths.phasesFilePath, nextState);
-
-      const output = createWriteResult({
-        status: "ok",
-        tool: "forge_rebuild_phases",
-        updatedFile: "phases",
-        message: `Rebuilt phases with ${nextState.phases.length} phase(s).`
-      });
-
-      return {
-        content: textResult(output),
-        structuredContent: output
-      };
-    }
-  );
-
-  server.registerTool(
-    "forge_flag_drift",
-    {
-      title: "Forge Flag Drift",
-      description:
-        "Record project drift when current work conflicts with architecture, prior decisions, or constraints.",
-      inputSchema: ForgeFlagDriftInputSchema,
-      outputSchema: WriteResultSchema,
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        idempotentHint: false,
-        openWorldHint: false
-      }
-    },
-    async ({ cwd, severity, summary, detail, relatedFiles }) => {
-      const state = await loadManagedForgeState(cwd ?? process.cwd());
-      const recommendedAction = getDriftRecommendation(severity);
-      const record = createDriftRecord(
-        severity,
-        summary,
-        recommendedAction,
-        detail,
-        relatedFiles ?? []
-      );
-
-      state.memory.driftLog.push(record);
-      await saveMemoryState(state.paths.memoryFilePath, state.memory);
-
-      const output = createWriteResult({
-        status: "ok",
-        tool: "forge_flag_drift",
-        updatedFile: "memory",
-        message: `Logged ${severity} drift: ${summary}`,
-        entityId: record.id,
-        severity,
-        recommendedAction,
-        requiresAttention: record.requiresAttention
-      });
-
-      return {
-        content: textResult(output),
-        structuredContent: output
-      };
-    }
-  );
-
-  server.registerTool(
-    "forge_session_end",
-    {
-      title: "Forge Session End",
-      description:
-        "Persist a best-effort session summary and next-step handoff, and optionally append project-local Forge improvement feedback.",
-      inputSchema: ForgeSessionEndInputSchema,
-      outputSchema: ForgeSessionEndOutputSchema,
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        idempotentHint: false,
-        openWorldHint: false
-      }
-    },
-    async ({ cwd, summary, nextStep, issuesAndNicetiesAsked }) => {
-      const state = await loadManagedForgeState(cwd ?? process.cwd());
-      applySessionMutation(state, summary, nextStep);
-      await saveMemoryState(state.paths.memoryFilePath, state.memory);
-
-      const feedbackResult =
-        issuesAndNicetiesAsked && issuesAndNicetiesAsked.length > 0
-          ? await appendIssuesAndNicetiesAsked(state.location.forgeDirectory, issuesAndNicetiesAsked, {
-              summary,
-              nextStep
-            })
-          : null;
-
-      const output = createSessionEndResult({
-        status: "ok",
-        tool: "forge_session_end",
-        updatedFile: "memory",
-        message: feedbackResult
-          ? `Saved session summary and next step, and appended ${feedbackResult.entries.length} issues-and-niceties entry(s).`
-          : "Saved session summary and next step.",
-        feedbackFilePath: feedbackResult?.filePath,
-        feedbackEntries: feedbackResult
-          ? feedbackResult.entries.map((entry) => ({
-              id: entry.id,
-              kind: entry.kind,
-              summary: entry.summary,
-              createdAt: entry.createdAt
-            }))
-          : []
-      });
 
       return {
         content: textResult(output),

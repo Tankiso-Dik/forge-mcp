@@ -50,7 +50,7 @@ Did `RISK_REGISTER.md` capture real risks tied to this workspace, not generic fi
 
 Did the session clearly recognize that the incident materially changed the direction of the work?
 
-### 8. Explicit drift / issue handling
+### 8. Explicit issue handling
 
 Was the change handled explicitly rather than being silently absorbed?
 
@@ -85,7 +85,7 @@ Did the final session resume from tracked continuity rather than redoing earlier
 
 ### 14. Final state integrity
 
-Did issues, drift, phase state, and handoff appear to match the real state of the workspace?
+Did issues, phase state, and handoff appear to match the real state of the workspace?
 
 ### 15. Closeout quality
 
@@ -116,7 +116,7 @@ Did the agent avoid turning Forge into noisy bookkeeping?
 
 ### 20. WorkingView leverage
 
-Did the behavior suggest that `workingView` guidance was actually helping decisions?
+Did the behavior suggest that `workingView.shelf` and `workingView.session` were actually helping decisions?
 
 ## Score interpretation
 
@@ -132,5 +132,5 @@ After scoring, answer these:
 1. Where did Forge help most?
 2. Where did the agent still fall back to rediscovery?
 3. Did the agent over-write state anywhere?
-4. Did the agent miss any moment that should have triggered explicit issue or drift handling?
+4. Did the agent miss any moment that should have triggered explicit issue handling?
 5. What is the single highest-value product improvement suggested by this run?

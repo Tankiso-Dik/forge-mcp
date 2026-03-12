@@ -9,7 +9,8 @@ import {
   GLOBAL_FILE_NAME,
   MEMORY_FILE_NAME,
   PHASES_FILE_NAME,
-  PLAN_FILE_NAME
+  PLAN_FILE_NAME,
+  SHAPE_FILE_NAME
 } from "../constants.js";
 import type { ForgePaths, ForgeProjectLocation } from "../types.js";
 
@@ -76,7 +77,8 @@ export function buildForgePaths(location: ForgeProjectLocation): ForgePaths {
       globalFilePath,
       memoryFilePath: null,
       planFilePath: null,
-      phasesFilePath: null
+      phasesFilePath: null,
+      shapeFilePath: null
     };
   }
 
@@ -84,6 +86,7 @@ export function buildForgePaths(location: ForgeProjectLocation): ForgePaths {
     globalFilePath,
     memoryFilePath: path.join(location.forgeDirectory, MEMORY_FILE_NAME),
     planFilePath: path.join(location.forgeDirectory, PLAN_FILE_NAME),
-    phasesFilePath: path.join(location.forgeDirectory, PHASES_FILE_NAME)
+    phasesFilePath: path.join(location.forgeDirectory, PHASES_FILE_NAME),
+    shapeFilePath: path.join(location.forgeDirectory, SHAPE_FILE_NAME)
   };
 }

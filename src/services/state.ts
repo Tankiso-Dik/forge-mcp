@@ -3,7 +3,9 @@ import {
   ForgeLoadOutputSchema,
   MemoryStateSchema,
   PhasesStateSchema,
-  PlanStateSchema
+  PlanStateSchema,
+  ShapeMetaSchema,
+  ShapeStateSchema
 } from "../schemas.js";
 import type {
   FileStatus,
@@ -13,17 +15,20 @@ import type {
   GlobalState,
   MemoryState,
   PhasesState,
-  PlanState
+  PlanState,
+  ShapeMeta,
+  ShapeState
 } from "../types.js";
 import {
   normalizeGlobalState,
   normalizeMemoryState,
   normalizePhasesState,
-  normalizePlanState
+  normalizePlanState,
+  normalizeShapeState
 } from "./migrations.js";
 import { buildForgePaths, discoverForgeProject, isHomeDirectory } from "./discovery.js";
 import { readJsonFile, writeJsonAtomic } from "./filesystem.js";
-import { initializeForgeProject } from "./init.js";
+import { buildShapeMeta } from "./shape.js";
 import { buildWorkingView } from "./working-view.js";
 
 function toFileStatus(pathValue: string, exists: boolean, source: "default" | "disk"): FileStatus {
@@ -44,28 +49,26 @@ export interface ManagedForgeState {
     memoryFilePath: string;
     planFilePath: string;
     phasesFilePath: string;
+    shapeFilePath: string;
   };
   memory: MemoryState;
   plan: PlanState;
   phases: PhasesState;
+  shape: ShapeState;
 }
 
 async function resolveActiveForgeLocation(startCwd: string): Promise<ForgeProjectLocation> {
-  const initialLocation = await discoverForgeProject(startCwd);
-
-  if (initialLocation.managedProject || isHomeDirectory(initialLocation.cwd)) {
-    return initialLocation;
-  }
-
-  await initializeForgeProject(initialLocation.cwd, false);
-  return discoverForgeProject(initialLocation.cwd);
+  return discoverForgeProject(startCwd);
 }
 
-export async function loadForgeState(startCwd: string): Promise<ForgeLoadOutput> {
+export async function loadForgeState(
+  startCwd: string,
+  mode: "compact" | "full" = "compact"
+): Promise<ForgeLoadOutput> {
   const location = await resolveActiveForgeLocation(startCwd);
   const paths = buildForgePaths(location);
 
-  const [globalResult, memoryResult, planResult, phasesResult] = await Promise.all([
+  const [globalResult, memoryResult, planResult, phasesResult, shapeResult] = await Promise.all([
     readJsonFile<GlobalState>(paths.globalFilePath, normalizeGlobalState, normalizeGlobalState({})),
     paths.memoryFilePath
       ? readJsonFile<MemoryState>(
@@ -82,6 +85,13 @@ export async function loadForgeState(startCwd: string): Promise<ForgeLoadOutput>
           paths.phasesFilePath,
           normalizePhasesState,
           normalizePhasesState({})
+        )
+      : Promise.resolve(null),
+    paths.shapeFilePath
+      ? readJsonFile<ShapeState>(
+          paths.shapeFilePath,
+          normalizeShapeState,
+          normalizeShapeState({})
         )
       : Promise.resolve(null)
   ]);
@@ -102,10 +112,17 @@ export async function loadForgeState(startCwd: string): Promise<ForgeLoadOutput>
     cwd: location.cwd,
     projectRoot: location.projectRoot,
     forgeDirectory: location.forgeDirectory,
+    mode,
     global: globalResult.value,
-    memory: memoryResult?.value ?? null,
-    plan: planResult?.value ?? null,
-    phases: phasesResult?.value ?? null,
+    memory: mode === "full" ? memoryResult?.value ?? null : null,
+    plan: mode === "full" ? planResult?.value ?? null : null,
+    phases: mode === "full" ? phasesResult?.value ?? null : null,
+    shapeMeta: shapeResult
+      ? ShapeMetaSchema.parse({
+          ...buildShapeMeta(shapeResult.value),
+          exists: shapeResult.exists
+        })
+      : null,
     workingView,
     files: {
       global: toFileStatus(paths.globalFilePath, globalResult.exists, globalResult.source),
@@ -117,6 +134,9 @@ export async function loadForgeState(startCwd: string): Promise<ForgeLoadOutput>
         : null,
       phases: paths.phasesFilePath && phasesResult
         ? toFileStatus(paths.phasesFilePath, phasesResult.exists, phasesResult.source)
+        : null,
+      shape: paths.shapeFilePath && shapeResult
+        ? toFileStatus(paths.shapeFilePath, shapeResult.exists, shapeResult.source)
         : null
     }
   });
@@ -134,22 +154,32 @@ export async function savePhasesState(filePath: string, value: PhasesState): Pro
   await writeJsonAtomic(filePath, PhasesStateSchema.parse(value));
 }
 
+export async function saveShapeState(filePath: string, value: ShapeState): Promise<void> {
+  await writeJsonAtomic(filePath, ShapeStateSchema.parse(value));
+}
+
 export async function loadManagedForgeState(startCwd: string): Promise<ManagedForgeState> {
   const location = await resolveActiveForgeLocation(startCwd);
 
   if (!location.managedProject || !location.projectRoot || !location.forgeDirectory) {
+    if (isHomeDirectory(location.cwd)) {
+      throw new Error(
+        `Forge is not active in the home directory (${location.cwd}). Use a project subdirectory or initialize a different directory explicitly.`
+      );
+    }
+
     throw new Error(
-      `Forge auto-bootstrap is disabled for the home directory (${location.cwd}). Use a project subdirectory or initialize a different directory explicitly.`
+      `No Forge project was found for '${location.cwd}'. Run forge_init first if you want this directory to be managed.`
     );
   }
 
   const paths = buildForgePaths(location);
 
-  if (!paths.memoryFilePath || !paths.planFilePath || !paths.phasesFilePath) {
+  if (!paths.memoryFilePath || !paths.planFilePath || !paths.phasesFilePath || !paths.shapeFilePath) {
     throw new Error("Forge project paths could not be resolved.");
   }
 
-  const [memoryResult, planResult, phasesResult] = await Promise.all([
+  const [memoryResult, planResult, phasesResult, shapeResult] = await Promise.all([
     readJsonFile<MemoryState>(
       paths.memoryFilePath,
       normalizeMemoryState,
@@ -164,6 +194,11 @@ export async function loadManagedForgeState(startCwd: string): Promise<ManagedFo
       paths.phasesFilePath,
       normalizePhasesState,
       normalizePhasesState({})
+    ),
+    readJsonFile<ShapeState>(
+      paths.shapeFilePath,
+      normalizeShapeState,
+      normalizeShapeState({})
     )
   ]);
 
@@ -178,10 +213,12 @@ export async function loadManagedForgeState(startCwd: string): Promise<ManagedFo
       globalFilePath: paths.globalFilePath,
       memoryFilePath: paths.memoryFilePath,
       planFilePath: paths.planFilePath,
-      phasesFilePath: paths.phasesFilePath
+      phasesFilePath: paths.phasesFilePath,
+      shapeFilePath: paths.shapeFilePath
     },
     memory: memoryResult.value,
     plan: planResult.value,
-    phases: phasesResult.value
+    phases: phasesResult.value,
+    shape: shapeResult.value
   };
 }

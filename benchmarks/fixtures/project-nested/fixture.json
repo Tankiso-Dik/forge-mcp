@@ -1,5 +1,0 @@
-{
-  "name": "project-nested",
-  "description": "A Forge-managed project where benchmark entry starts from a nested subdirectory.",
-  "entryCwd": "apps/web/src"
-}

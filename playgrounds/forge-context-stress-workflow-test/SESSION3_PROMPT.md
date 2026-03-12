@@ -14,7 +14,7 @@ Your job:
 Operating expectations:
 
 - Do not absorb the incident silently if it materially changes direction.
-- If this creates real drift against the prior plan, handle that explicitly.
+- If this creates a real mismatch against the prior plan, handle that explicitly in state and files.
 - Keep terminal narration brief.
 - Preserve good prior work where possible, but do not defend outdated decisions just to avoid changes.
 - If the incident changes trust or portability language, reflect that in both product and architecture material.

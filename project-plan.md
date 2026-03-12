@@ -1,86 +1,112 @@
-# Forge — Project Plan
+# Forge — Current Project Plan
 
 ## Overview
 
-Forge is a local MCP server that gives Codex persistent project continuity without relying on external services.
+Forge is a local MCP server for Codex CLI that provides:
+- structured project notes
+- lightweight continuity
+- explicit phase progress
+- explicit session handoff
+- a separate structural map through Shape
 
-It is a local-first project brain for:
-- session continuity
-- project memory
-- plan tracking
-- phase tracking
-- drift detection
-- lightweight project observations
+Forge is local-first and file-backed. It is designed for one machine, one developer, and low-latency stdio use against local project state.
 
-Forge is not a hosted service, not a collaborative SaaS, and not a Linear replacement clone. It is a local MCP tool designed to support agent workflows inside Codex.
+Forge is not:
+- a second reasoning brain
+- a planning cockpit
+- a hosted service
+- a collaborative PM platform
+- a replacement for source files or project docs
 
-## Core Product Direction
+## Product Direction
 
-Forge should be:
+Outside Shape, Forge should behave like a passive project shelf:
+- easy to read
+- explicit to update
+- small enough to stay understandable
+- useful across sessions
 
-- local-only
-- fast to start
-- simple to run
-- single-binary friendly at runtime
-- safe by default
-- structured enough for reliable agent use
-- small enough to reason about clearly
+The product should favor:
+- explicit read/write behavior
+- durable structured notes
+- lightweight handoff continuity
+- explicit phase/step tracking
+- separate structural mapping
 
-## Technical Direction
+The product should avoid:
+- hidden project bootstrapping on read
+- advisory manager behavior
+- broad inference/routing layers
+- duplicated write surfaces
+- trying to out-reason Codex
 
-- Language: TypeScript
-- Build target: local MCP server
-- Primary purpose: work with Codex through MCP
-- Network dependency: none for normal operation
-- Data storage: local JSON files
-- Runtime style: fast startup, low operational overhead
+## Core State Areas
 
-## Main Concepts
+Forge is built around five state areas:
 
-Forge is built around four state areas:
+1. global defaults
+2. plan
+3. memory
+4. phases
+5. shape
 
-1. Global user defaults
-2. Project memory
-3. Project plan
-4. Project phases
+### 1. Global defaults
 
-### 1. Global user defaults
+Global user state lives outside the project in:
 
-A user-managed global file outside the project stores:
+`~/.forge/global.json`
 
-- hard constraints
-- soft preferences
+It stores:
+- constraints
+- preferences
 
-This is read by Forge but not written by Forge.
+Forge reads this file but does not write to it.
 
-### 2. Project memory
+### 2. Plan
 
-Project memory stores runtime continuity and learned project context, including:
-
-- decisions
-- tried and abandoned approaches
-- habits
-- habit suggestions
-- favourite prompts
-- tracked issues
-- drift log
-- concerns
-- session summary and next step
-
-### 3. Project plan
-
-Project plan stores more stable product and architecture context, including:
-
+`plan.json` holds stable project identity:
 - stack
 - design style
 - core features
 - planned features
 - architecture decisions
-- accepted suggestions
 
-### 4. Project phases
+This is the "what this project is" layer.
 
-Project phases track execution progress through structured phases and steps.
+### 3. Memory
+
+`memory.json` holds durable continuity:
+- typed notes
+- decisions
+- interpretations
+- superseded conclusions
+- issues
+- session handoff
+
+This is the "what we learned / what matters / what changed" layer.
+
+### 4. Phases
+
+`phases.json` holds execution structure:
+- phases
+- steps
+- statuses
+- optional step notes
+
+This is the explicit execution-progress layer.
+
+### 5. Shape
+
+`shape.json` holds the current structural mental model:
+- surfaces
+- capabilities
+- parts
+
+Shape is separate on purpose:
+- `plan` is intended stable identity
+- `memory` is durable continuity
+- `phases` is execution progress
+- `shape` is current structural form
 
 ## Files
 
@@ -88,224 +114,213 @@ Project phases track execution progress through structured phases and steps.
 
 `~/.forge/global.json`
 
-Contains:
-- `constraints`
-- `preferences`
-
-Forge reads this file but does not write to it.
-
 ### Project files
 
 Inside project-local `.forge/`:
-
 - `memory.json`
 - `plan.json`
 - `phases.json`
+- `shape.json`
 
 ## Project Discovery
 
-Forge should discover the active project by walking upward from the current working directory until it finds a `.forge/` folder.
+Forge discovers the active project by walking upward from the current working directory until it finds a `.forge/` folder.
 
 Rules:
 - nearest `.forge/` wins
-- stop at home directory
-- if none is found, Forge should return a clean non-project response rather than erroring noisily
+- stop at the exact home directory
+- `forge_load` does not auto-initialize projects
+- if none is found, Forge should return an unmanaged-project response rather than silently creating one
+- explicit initialization goes through `forge_init`
 
-## Core Tool Surface
+## Public Tool Surface
 
-Forge should expose these tools:
+Forge currently exposes these tools:
 
-1. `forge_load`
-2. `forge_update`
-3. `forge_log`
-4. `forge_step_done`
-5. `forge_rebuild_phases`
-6. `forge_flag_drift`
-7. `forge_session_end`
+1. `forge_init`
+2. `forge_load`
+3. `forge_checkpoint`
+4. `forge_update`
+5. `forge_shape`
+6. `forge_update_shape`
 
 ## Tool Intent
 
+### `forge_init`
+
+Creates `.forge/` and seeds:
+- `memory.json`
+- `plan.json`
+- `phases.json`
+- `shape.json`
+
+This is the explicit project bootstrap path.
+
 ### `forge_load`
-Used at the start of relevant work to load active Forge state.
+
+The passive read path.
 
 Responsibilities:
-- discover the project
-- return whether this is a Forge-managed project
-- load global, memory, plan, and phases
-- return a pruned, useful working view
+- discover whether a directory is Forge-managed
+- read global, plan, memory, phases, and Shape metadata
+- return a compact shelf-oriented working view
+- optionally return full raw state when explicitly requested
+
+`forge_load` should stay lean. It should expose state, not tell Codex what to do.
+
+### `forge_checkpoint`
+
+The default milestone write path.
+
+Responsibilities:
+- store a milestone note
+- optionally store a typed note
+- mark completed steps
+- update session handoff
+- optionally carry a Shape delta
+
+This is the normal "we made meaningful progress" tool.
+
+Checkpoint note kinds should stay practical and low-friction. They are not meant to enforce a taxonomy beyond what helps later sessions recover the important state.
 
 ### `forge_update`
-Used for structured state changes.
 
-Examples:
+The precise mutation API.
+
+Responsibilities:
+- explicit updates to memory
+- explicit updates to plan
+- explicit updates to phases
+
+Use it when the caller knows exactly which structured state should change.
+
+`forge_update` is an advanced precision path, not the normal write loop.
+The normal path should still be:
+- load
+- work
+- checkpoint
+
+Use `forge_update` when exact structured hygiene matters more than milestone capture.
+
+### `forge_shape`
+
+The dedicated Shape read tool.
+
+Responsibilities:
+- read the structural map selectively
+- return compact or full Shape data
+
+Shape is most useful when the project has multiple durable surfaces, capabilities, or parts whose fit matters across sessions.
+This includes:
+- applications with multiple screens or panels
+- multi-document workspaces
+- research or investigation projects with distinct outputs and working areas
+- systems where later sessions benefit from recovering the map before rereading everything
+
+### `forge_update_shape`
+
+The dedicated Shape mutation tool.
+
+Responsibilities:
+- precise updates to surfaces
+- precise updates to capabilities
+- precise updates to parts
+- top-level Shape metadata changes
+
+Shape should be updated when the structural map changed in a durable way, not for every small implementation or content edit.
+
+## workingView
+
+`forge_load` in compact mode should expose:
+- `workingView.shelf`
+- `workingView.session`
+
+`workingView.shelf` is the main agent-facing read surface and should contain:
+- notes
 - decisions
-- tried and abandoned entries
-- plan updates
-- issue resolution
-- habit confirmation or decline
+- features
+- issues
+- interpretations
+- phases
 
-### `forge_log`
-Used for quick in-progress observations.
+`workingView.session` should contain:
+- summary
+- next step
+- timestamps
 
-Examples:
-- bug
-- ui inconsistency
-- tech debt
-- ambiguous item
-- struggle
-- concern
-- habit suggestion
-
-### `forge_step_done`
-Used when a step completes.
-
-### `forge_rebuild_phases`
-Used when the overall execution sequence materially changes.
-
-### `forge_flag_drift`
-Used when current work contradicts:
-- important prior decisions
-- architecture
-- constraints
-- relevant plan direction
-
-Should classify severity and guide handling.
-
-### `forge_session_end`
-Used to write a useful session close summary and next-step handoff.
-
-This is best-effort and not correctness-critical.
+This is intentionally a shelf projection, not an advice layer.
 
 ## Data Model Principles
 
-- stable IDs for mutable entities
-- separate durable updates from quick observations
-- constraints and preferences must not be treated equally
-- architecture and permanent decisions carry more weight than session-level context
-- critical state should be written incrementally
-- session-end summaries improve continuity but should not be required for correctness
-- file schemas should be versioned
+- keep note storage explicit
+- keep plan stable and lightweight
+- keep memory durable but not bloated
+- keep phases as the explicit progress structure
+- keep Shape separate from notes/history/progress
+- use stable IDs for mutable records
+- prefer explicit writes over hidden inference
+- keep file schemas versioned
 
 ## Safety Principles
 
-- hard constraints override soft preferences
-- risky domains should be treated conservatively
-- high-severity drift should not be silently ignored
-- Forge should not behave destructively or opaquely
-- project data should remain local
-
-## Write Strategy
-
-File writes should be safe and predictable.
-
-Requirements:
-- use atomic write semantics
-- avoid partial-write corruption
-- design for simple, reliable local persistence
+- project data remains local
+- writes should be atomic
+- initialization should be explicit
+- Forge should not silently invent project state during normal reads
+- Forge should expose state clearly without trying to manage Codex
 
 ## Scope Boundaries
 
 Forge does:
-- maintain local project continuity
-- record project memory
-- track plan and phases
-- surface drift
-- support agent workflow
+- keep local continuity
+- store structured project notes
+- preserve session handoff
+- track phase progress
+- store explicit issues and interpretations
+- store the structural map separately through Shape
 
 Forge does not:
-- sync to external services
-- replace ordinary code reading
-- replace project files and source code as ground truth
-- make product intent decisions on its own
-- act like a remote PM platform
+- replace source code as ground truth
+- replace project docs
+- plan work on Codex's behalf
+- act like a reasoning assistant
+- act like a remote PM system
 
-## Initial Build Goal
+## Current Build Goal
 
-The first implementation should create a working local MCP server foundation with the full tool surface stubbed or implemented enough to validate the architecture.
+Keep Forge small, explicit, and reliable.
 
-The first milestone is not polishing every edge case. It is proving the full Forge shape works correctly.
+The current implementation goal is not to expand the surface area again. It is to keep the existing read/write model coherent:
+- one explicit init path
+- one lean read path
+- one bundled milestone write path
+- one precise mutation path
+- one separate structural map
 
-## Phase 1 — Foundation
+## Current Focus Areas
 
-Build the minimum working foundation for:
-
-- project discovery
-- reading global file
-- reading and writing project files
-- atomic file writes
-- initial tool registration
-- base schemas and types
-- clean project structure
-- runnable local development flow
-
-Deliverables:
-- working TypeScript project scaffold
-- MCP server entrypoint
-- project discovery logic
-- typed models for global, memory, plan, and phases
-- safe local file read/write utilities
-- initial README with setup/run instructions
-
-## Phase 2 — Core Tools
-
-Implement the main behavior of:
-
-- `forge_load`
-- `forge_update`
-- `forge_log`
-- `forge_step_done`
-- `forge_rebuild_phases`
-- `forge_flag_drift`
-- `forge_session_end`
-
-Deliverables:
-- tools registered and callable
-- type-safe input/output handling
-- local state updates working correctly
-- clean non-project handling
-- clear structured responses
-
-## Phase 3 — Initialization Flow
-
-Implement `forge init` or equivalent project bootstrap flow.
-
-Deliverables:
-- create `.forge/`
-- seed `memory.json`
-- seed `plan.json`
-- seed `phases.json`
-- refuse destructive overwrite by default
-
-## Phase 4 — Refinement
-
-Refine:
-- pruning behavior
-- drift handling
-- issue resolution flow
-- session summary quality
-- migration readiness
-- README clarity
-- developer ergonomics
+1. Keep `forge_load` passive and shelf-oriented
+2. Keep `forge_checkpoint` lean and milestone-focused
+3. Keep `forge_update` precise and explicit
+4. Keep Shape independent and structural
+5. Prevent product drift back toward advisory / hidden-logic behavior
 
 ## Suggested Project Structure
 
-This is directional, not mandatory.
+This is descriptive of the current codebase, not a redesign target.
 
 ```text
-forge/
+forge-mcp/
 ├── src/
 │   ├── index.ts
-│   ├── server/
-│   ├── discovery/
-│   ├── store/
-│   ├── global/
-│   ├── memory/
-│   ├── plan/
-│   ├── phases/
+│   ├── constants.ts
+│   ├── schemas.ts
+│   ├── types.ts
+│   ├── services/
 │   ├── tools/
-│   ├── types/
-│   └── utils/
+│   └── ...
 ├── package.json
 ├── tsconfig.json
 ├── README.md
-└── PROJECT_PLAN.md
+└── project-plan.md
+```

@@ -1,5 +1,0 @@
-{
-  "name": "project-partial",
-  "description": "A Forge project with only memory.json present to test normalization and missing-file recovery.",
-  "entryCwd": "."
-}

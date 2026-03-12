@@ -1,13 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import type {
-  DriftRecord,
-  HabitRecord,
+  InterpretationConfidence,
+  InterpretationRecord,
+  InterpretationStatus,
   IssueRecord,
-  ObservationKind,
-  ObservationRecord,
   ProjectContextItem,
-  PromptRecord
+  SmartNote
 } from "../types.js";
 
 export function createEntityId(prefix: string): string {
@@ -35,45 +34,29 @@ export function createContextItem(
   };
 }
 
-export function createPromptRecord(title: string, prompt: string, relatedFiles: string[] = []): PromptRecord {
+export function createSmartNote(input: {
+  kind: SmartNote["kind"];
+  text: string;
+  keywords?: string[];
+  scope?: SmartNote["scope"];
+  confidence?: SmartNote["confidence"];
+  source?: SmartNote["source"];
+  relatedFiles?: string[];
+  status?: SmartNote["status"];
+}): SmartNote {
   const timestamp = nowIso();
 
   return {
-    id: createEntityId("prompt"),
-    title,
-    prompt,
+    id: createEntityId("note"),
+    kind: input.kind,
+    text: input.text,
+    keywords: input.keywords ?? [],
+    scope: input.scope ?? "project",
+    confidence: input.confidence ?? "medium",
+    source: input.source ?? "update",
     createdAt: timestamp,
-    relatedFiles
-  };
-}
-
-export function createObservationRecord(
-  kind: ObservationKind,
-  summary: string,
-  detail?: string,
-  relatedFiles: string[] = []
-): ObservationRecord {
-  return {
-    id: createEntityId("obs"),
-    kind,
-    summary,
-    detail,
-    createdAt: nowIso(),
-    relatedFiles
-  };
-}
-
-export function createHabitRecord(
-  description: string,
-  status: HabitRecord["status"]
-): HabitRecord {
-  const timestamp = nowIso();
-
-  return {
-    id: createEntityId("habit"),
-    description,
-    status,
-    createdAt: timestamp
+    relatedFiles: input.relatedFiles ?? [],
+    status: input.status ?? "active"
   };
 }
 
@@ -91,6 +74,7 @@ export function createIssueRecord(
     title,
     status,
     createdAt: timestamp,
+    transformedInto: [],
     relatedFiles
   };
 
@@ -101,27 +85,47 @@ export function createIssueRecord(
   return record;
 }
 
-export function createDriftRecord(
-  severity: DriftRecord["severity"],
-  summary: string,
-  recommendedAction: string,
-  detail?: string,
-  relatedFiles: string[] = []
-): DriftRecord {
-  const record: DriftRecord = {
-    id: createEntityId("drift"),
-    severity,
-    status: "open",
-    summary,
-    recommendedAction,
-    requiresAttention: severity === "high" || severity === "critical",
-    createdAt: nowIso(),
-    relatedFiles
+export function createInterpretationRecord(input: {
+  title: string;
+  detail: string;
+  status: InterpretationStatus;
+  confidence: InterpretationConfidence;
+  basis?: string[];
+  supersedes?: string[];
+  relatedFiles?: string[];
+}): InterpretationRecord {
+  const timestamp = nowIso();
+
+  const record: InterpretationRecord = {
+    id: createEntityId("interp"),
+    title: input.title,
+    status: input.status,
+    confidence: input.confidence,
+    detail: input.detail,
+    basis: input.basis ?? [],
+    supersedes: input.supersedes ?? [],
+    createdAt: timestamp,
+    relatedFiles: input.relatedFiles ?? []
   };
 
-  if (detail) {
-    record.detail = detail;
-  }
-
   return record;
+}
+
+export function createSupersededConclusion(input: {
+  title: string;
+  oldStatus: string;
+  reason: string;
+  replacement?: string;
+  relatedFiles?: string[];
+}) {
+  return {
+    id: createEntityId("sup"),
+    title: input.title,
+    oldStatus: input.oldStatus,
+    newStatus: "superseded" as const,
+    reason: input.reason,
+    replacement: input.replacement,
+    createdAt: nowIso(),
+    relatedFiles: input.relatedFiles ?? []
+  };
 }

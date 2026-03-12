@@ -15,11 +15,11 @@ Operating expectations:
 - Do not pretend this is the same task shape if it is not.
 - If the change materially affects plan or execution structure, handle that explicitly.
 - Keep terminal narration brief.
-- Use Forge where it helps continuity, drift handling, or phase tracking.
+- Use Forge where it helps continuity, issue handling, or phase tracking.
 - Do not rewrite prior work unnecessarily.
 
 Success means:
 
 - `STUDY_GUIDE.md` is a meaningful new deliverable
-- project state reflects the changed direction instead of silently drifting
+- project state reflects the changed direction instead of silently losing track of it
 - the next session can focus on final review and closure

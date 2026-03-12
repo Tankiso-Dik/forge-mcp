@@ -30,7 +30,7 @@ Copy this into a scratch note or fill it in directly while running the five-sess
 - Other Forge tools used:
 - What the session produced:
 - Was the incident handled explicitly:
-- Did scope/drift get handled clearly:
+- Did the plan/state mismatch get handled clearly:
 - Signs of underuse:
 - Signs of overuse:
 - Handoff quality:

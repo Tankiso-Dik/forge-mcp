@@ -6,8 +6,12 @@ const TimestampSchema = z.iso.datetime();
 
 export const EntityIdSchema = z.string().min(1);
 export const SeveritySchema = z.enum(["low", "medium", "high", "critical"]);
-export const IssueStatusSchema = z.enum(["open", "resolved"]);
-export const DriftStatusSchema = z.enum(["open", "acknowledged", "resolved"]);
+export const IssueStatusSchema = z.enum(["open", "narrowed", "transformed", "resolved", "dormant"]);
+export const InterpretationStatusSchema = z.enum(["tentative", "working", "leading", "superseded"]);
+export const InterpretationConfidenceSchema = z.enum(["low", "medium", "medium_high", "high"]);
+export const ShapeConfidenceSchema = z.enum(["low", "medium", "high"]);
+export const ShapeStateSchemaEnum = z.enum(["active", "draft", "deprecated"]);
+export const ShapeDomainSchema = z.enum(["surfaces", "capabilities", "parts"]);
 
 export const GlobalStateSchema = z.object({
   version: z.literal(FILE_SCHEMA_VERSION).default(FILE_SCHEMA_VERSION),
@@ -16,6 +20,76 @@ export const GlobalStateSchema = z.object({
 });
 
 const RelatedFilesSchema = z.array(z.string().min(1)).max(10).default([]);
+
+export const ShapeSurfaceSchema = z.object({
+  id: EntityIdSchema,
+  name: z.string().min(1),
+  purpose: z.string().min(1),
+  primaryUserGoal: z.string().min(1).optional(),
+  entryConditions: z.array(z.string().min(1)).default([]),
+  keyRegions: z.array(z.string().min(1)).default([]),
+  connectedCapabilities: z.array(EntityIdSchema).default([]),
+  connectedSurfaces: z.array(EntityIdSchema).default([]),
+  flowNotes: z.array(z.string().min(1)).default([]),
+  relatedFiles: RelatedFilesSchema,
+  state: ShapeStateSchemaEnum.default("active"),
+  confidence: ShapeConfidenceSchema.default("medium"),
+  lastUpdated: TimestampSchema
+});
+
+export const ShapeCapabilitySchema = z.object({
+  id: EntityIdSchema,
+  name: z.string().min(1),
+  purpose: z.string().min(1),
+  solves: z.string().min(1),
+  surfacedIn: z.array(EntityIdSchema).default([]),
+  supportedBy: z.array(EntityIdSchema).default([]),
+  dependsOn: z.array(EntityIdSchema).default([]),
+  inputs: z.array(z.string().min(1)).default([]),
+  outputs: z.array(z.string().min(1)).default([]),
+  relatedFiles: RelatedFilesSchema,
+  state: ShapeStateSchemaEnum.default("active"),
+  confidence: ShapeConfidenceSchema.default("medium"),
+  lastUpdated: TimestampSchema
+});
+
+export const ShapePartSchema = z.object({
+  id: EntityIdSchema,
+  name: z.string().min(1),
+  role: z.string().min(1),
+  boundary: z.string().min(1).optional(),
+  supports: z.array(EntityIdSchema).default([]),
+  dependsOn: z.array(EntityIdSchema).default([]),
+  exposesTo: z.array(EntityIdSchema).default([]),
+  relatedFiles: RelatedFilesSchema,
+  state: ShapeStateSchemaEnum.default("active"),
+  confidence: ShapeConfidenceSchema.default("medium"),
+  lastUpdated: TimestampSchema
+});
+
+export const ShapeStateSchema = z.object({
+  shape_version: z.literal(1).default(1),
+  project_type: z.string().min(1).default("unknown"),
+  summary: z.string().default(""),
+  surfaces: z.array(ShapeSurfaceSchema).default([]),
+  capabilities: z.array(ShapeCapabilitySchema).default([]),
+  parts: z.array(ShapePartSchema).default([]),
+  updated_at: TimestampSchema.optional(),
+  confidence: ShapeConfidenceSchema.default("low")
+});
+
+export const ShapeMetaSchema = z.object({
+  exists: z.boolean(),
+  projectType: z.string().min(1),
+  summary: z.string(),
+  updatedAt: TimestampSchema.optional(),
+  confidence: ShapeConfidenceSchema,
+  counts: z.object({
+    surfaces: z.number().int().nonnegative(),
+    capabilities: z.number().int().nonnegative(),
+    parts: z.number().int().nonnegative()
+  })
+});
 
 export const ProjectContextItemSchema = z.object({
   id: EntityIdSchema,
@@ -26,40 +100,102 @@ export const ProjectContextItemSchema = z.object({
   relatedFiles: RelatedFilesSchema
 });
 
-export const HabitRecordSchema = z.object({
+export const SmartNoteKindSchema = z.enum([
+  "milestone",
+  "interpretation",
+  "preference",
+  "dislike",
+  "work_style",
+  "fact",
+  "reference",
+  "concern",
+  "ambiguity",
+  "revision_focus",
+  "snippet",
+  "superseded_read"
+]);
+
+const SmartNoteKindAliasMap: Record<string, z.infer<typeof SmartNoteKindSchema>> = {
+  status: "fact",
+  state: "fact",
+  update: "fact",
+  finding: "fact",
+  observation: "fact",
+  progress: "milestone",
+  risk: "concern",
+  warning: "concern",
+  blocker: "concern",
+  issue: "concern",
+  question: "ambiguity",
+  unknown: "ambiguity",
+  hypothesis: "interpretation",
+  theory: "interpretation",
+  read: "interpretation",
+  ref: "reference",
+  link: "reference",
+  doc: "reference",
+  example: "snippet",
+  revisit: "revision_focus",
+  follow_up: "revision_focus",
+  preferred: "preference",
+  avoid: "dislike",
+  workstyle: "work_style",
+  superseded: "superseded_read"
+};
+
+const SmartNoteKindInputSchema = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+  return SmartNoteKindAliasMap[normalized] ?? normalized;
+}, SmartNoteKindSchema);
+
+export const SmartNoteScopeSchema = z.enum(["project", "feature", "session"]);
+export const SmartNoteStatusSchema = z.enum(["active", "retired"]);
+export const SmartNoteSourceSchema = z.enum(["checkpoint", "update", "migration"]);
+
+export const SmartNoteSchema = z.object({
   id: EntityIdSchema,
-  description: z.string().min(1),
-  status: z.enum(["suggested", "confirmed", "declined"]),
+  kind: SmartNoteKindSchema,
+  text: z.string().min(1),
+  keywords: z.array(z.string().min(1)).default([]),
+  scope: SmartNoteScopeSchema.default("project"),
+  confidence: z.enum(["low", "medium", "high"]).default("medium"),
+  source: SmartNoteSourceSchema.default("update"),
   createdAt: TimestampSchema,
-  updatedAt: TimestampSchema.optional()
+  updatedAt: TimestampSchema.optional(),
+  relatedFiles: RelatedFilesSchema,
+  status: SmartNoteStatusSchema.default("active")
 });
 
-export const PromptRecordSchema = z.object({
+export const InterpretationRecordSchema = z.object({
   id: EntityIdSchema,
   title: z.string().min(1),
-  prompt: z.string().min(1),
+  status: InterpretationStatusSchema,
+  confidence: InterpretationConfidenceSchema,
+  detail: z.string().min(1),
+  basis: z.array(z.string().min(1)).default([]),
+  supersedes: z.array(EntityIdSchema).default([]),
   createdAt: TimestampSchema,
   updatedAt: TimestampSchema.optional(),
   relatedFiles: RelatedFilesSchema
 });
 
-export const ObservationKindSchema = z.enum([
-  "bug",
-  "ui_inconsistency",
-  "tech_debt",
-  "ambiguous_item",
-  "struggle",
-  "concern",
-  "habit_suggestion",
-  "note"
-]);
-
-export const ObservationRecordSchema = z.object({
+export const SupersededConclusionSchema = z.object({
   id: EntityIdSchema,
-  kind: ObservationKindSchema,
-  summary: z.string().min(1),
-  detail: z.string().optional(),
+  title: z.string().min(1),
+  oldStatus: z.string().min(1),
+  newStatus: z.literal("superseded").default("superseded"),
+  reason: z.string().min(1),
+  replacement: EntityIdSchema.optional(),
   createdAt: TimestampSchema,
+  updatedAt: TimestampSchema.optional(),
   relatedFiles: RelatedFilesSchema
 });
 
@@ -69,22 +205,13 @@ export const IssueRecordSchema = z.object({
   status: IssueStatusSchema,
   detail: z.string().optional(),
   resolution: z.string().optional(),
+  resolutionNote: z.string().optional(),
+  transformedInto: z.array(EntityIdSchema).default([]),
   createdAt: TimestampSchema,
   resolvedAt: TimestampSchema.optional(),
   updatedAt: TimestampSchema.optional(),
-  relatedFiles: RelatedFilesSchema
-});
-
-export const DriftRecordSchema = z.object({
-  id: EntityIdSchema,
-  severity: SeveritySchema,
-  status: DriftStatusSchema.default("open"),
-  summary: z.string().min(1),
-  detail: z.string().optional(),
-  recommendedAction: z.string().optional(),
-  requiresAttention: z.boolean().default(false),
-  createdAt: TimestampSchema,
-  updatedAt: TimestampSchema.optional(),
+  lastReassessedAt: TimestampSchema.optional(),
+  nextCheck: TimestampSchema.optional(),
   relatedFiles: RelatedFilesSchema
 });
 
@@ -99,12 +226,10 @@ export const MemoryStateSchema = z.object({
   version: z.literal(FILE_SCHEMA_VERSION).default(FILE_SCHEMA_VERSION),
   decisions: z.array(ProjectContextItemSchema).default([]),
   triedAndAbandoned: z.array(ProjectContextItemSchema).default([]),
-  observations: z.array(ObservationRecordSchema).default([]),
-  habits: z.array(HabitRecordSchema).default([]),
-  favouritePrompts: z.array(PromptRecordSchema).default([]),
+  interpretations: z.array(InterpretationRecordSchema).default([]),
+  supersededConclusions: z.array(SupersededConclusionSchema).default([]),
+  notes: z.array(SmartNoteSchema).default([]),
   issues: z.array(IssueRecordSchema).default([]),
-  driftLog: z.array(DriftRecordSchema).default([]),
-  concerns: z.array(ProjectContextItemSchema).default([]),
   session: SessionStateSchema.default({})
 });
 
@@ -114,8 +239,7 @@ export const PlanStateSchema = z.object({
   designStyle: z.array(z.string()).default([]),
   coreFeatures: z.array(z.string()).default([]),
   plannedFeatures: z.array(z.string()).default([]),
-  architectureDecisions: z.array(ProjectContextItemSchema).default([]),
-  acceptedSuggestions: z.array(ProjectContextItemSchema).default([])
+  architectureDecisions: z.array(ProjectContextItemSchema).default([])
 });
 
 export const StepStateSchema = z.object({
@@ -140,7 +264,8 @@ export const PhasesStateSchema = z.object({
 });
 
 export const ForgeLoadInputSchema = z.object({
-  cwd: z.string().min(1).optional()
+  cwd: z.string().min(1).optional(),
+  mode: z.enum(["compact", "full"]).default("compact")
 });
 
 export const ForgeInitInputSchema = z.object({
@@ -154,158 +279,42 @@ export const FileStatusSchema = z.object({
   source: z.enum(["default", "disk"])
 });
 
-export const ForgeEngagementModeSchema = z.enum(["none", "light", "managed"]);
-export const ForgeProjectScaleSchema = z.enum(["small", "medium", "large"]);
-export const ForgeReasonCodeSchema = z.enum([
-  "quiet_project",
-  "session_handoff_present",
-  "active_phase_present",
-  "multiple_active_phases",
-  "open_issue_present",
-  "multiple_open_issues",
-  "open_drift_present",
-  "high_attention_drift",
-  "project_medium_state",
-  "project_large_state",
-  "dense_notes"
-]);
-export const ForgeConfidenceSchema = z.enum(["low", "medium", "high"]);
-export const ForgeWriteStyleSchema = z.enum(["avoid", "minimal", "normal", "managed"]);
-export const ForgeUseForgeSchema = z.object({
-  mode: ForgeEngagementModeSchema,
-  confidence: ForgeConfidenceSchema,
-  reason: z.string().min(1)
-});
-export const ForgeLinkedFileOwnerSchema = z.object({
-  type: z.enum(["phase", "step", "issue", "drift", "decision", "architecture", "observation", "concern"]),
-  id: z.string().min(1),
-  title: z.string().min(1),
-  status: z.string().min(1).optional()
-});
-export const ForgeLinkedPhaseOwnerSchema = z.object({
-  phaseId: z.string().min(1),
-  phaseTitle: z.string().min(1),
-  phaseStatus: z.enum(["todo", "in_progress", "done"]),
-  via: z.enum(["phase", "step", "phase_and_step"]),
-  stepId: z.string().min(1).optional(),
-  stepTitle: z.string().min(1).optional()
-});
-export const ForgeLinkedFileSchema = z.object({
-  path: z.string().min(1),
-  exists: z.boolean(),
-  reasons: z.array(z.string().min(1)).min(1),
-  owners: z.array(ForgeLinkedFileOwnerSchema).min(1),
-  currentPhaseOwners: z.array(ForgeLinkedPhaseOwnerSchema),
-  primaryCurrentPhaseOwner: ForgeLinkedPhaseOwnerSchema.nullable()
-});
-export const ForgeResumeIssueSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1)
-});
-export const ForgeResumeDriftSchema = z.object({
-  id: z.string().min(1),
-  summary: z.string().min(1),
-  severity: SeveritySchema,
-  status: DriftStatusSchema
-});
-export const ForgeResumeDiffSchema = z.object({
-  since: TimestampSchema,
-  summary: z.string().min(1),
-  changes: z.array(z.string().min(1)),
-  changedFiles: z.array(z.string().min(1)),
-  newOpenIssues: z.array(ForgeResumeIssueSchema),
-  resolvedIssues: z.array(ForgeResumeIssueSchema),
-  changedDrift: z.array(ForgeResumeDriftSchema),
-  scopeShiftDetected: z.boolean()
-});
-export const IssuesAndNicetiesKindSchema = z.enum(["friction", "bug", "nicety", "wish"]);
-export const IssuesAndNicetiesAskedInputItemSchema = z.object({
-  kind: IssuesAndNicetiesKindSchema,
-  summary: z.string().min(1),
-  detail: z.string().optional(),
-  whatWouldHaveHelped: z.string().optional()
-});
-export const IssuesAndNicetiesAskedEntrySchema = z.object({
-  id: z.string().min(1),
-  kind: IssuesAndNicetiesKindSchema,
-  summary: z.string().min(1),
-  detail: z.string().optional(),
-  whatWouldHaveHelped: z.string().optional(),
-  createdAt: TimestampSchema,
-  sessionSummary: z.string().optional(),
-  nextStep: z.string().optional()
-});
-export const IssuesAndNicetiesAskedFileSchema = z.object({
-  version: z.literal(FILE_SCHEMA_VERSION).default(FILE_SCHEMA_VERSION),
-  entries: z.array(IssuesAndNicetiesAskedEntrySchema).default([])
-});
-export const ForgeExecutionAlignmentSchema = z.enum(["aligned", "needs_review", "drift_risk"]);
-export const ForgeCompareMatchSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1)
-});
-export const ForgeComparePhaseMatchSchema = z.object({
-  phaseId: z.string().min(1),
-  phaseTitle: z.string().min(1),
-  via: z.enum(["phase", "step", "phase_and_step"])
-});
-export const ForgeCompareDriftSchema = z.object({
-  id: z.string().min(1),
-  summary: z.string().min(1),
-  severity: SeveritySchema
-});
-export const ForgeSuggestUpdateRecommendationSchema = z.enum([
-  "none",
-  "forge_log",
-  "forge_update",
-  "forge_step_done",
-  "forge_checkpoint",
-  "forge_flag_drift",
-  "forge_session_end"
-]);
-export const ForgeSuggestedUpdateShapeSchema = z.object({
-  tool: ForgeSuggestUpdateRecommendationSchema,
-  domain: z.enum(["memory", "plan", "phases"]).optional(),
-  action: z.string().optional(),
-  fields: z.record(z.string(), z.unknown()).optional()
+export const ForgeShelfSchema = z.object({
+  notes: z.array(SmartNoteSchema),
+  decisions: z.array(ProjectContextItemSchema),
+  features: z.array(z.string().min(1)),
+  issues: z.array(IssueRecordSchema),
+  interpretations: z.array(InterpretationRecordSchema),
+  phases: z.array(PhaseStateSchema)
 });
 export const PhaseStepRefSchema = z.object({
   phaseId: z.string().min(1),
   stepId: z.string().min(1),
   note: z.string().optional()
 });
-export const SessionDraftReadinessSchema = z.object({
-  status: z.enum(["ready", "needs_attention", "blocked"]),
-  reason: z.string().min(1)
+export const WorkingViewSchema = z.object({
+  shelf: ForgeShelfSchema,
+  session: SessionStateSchema
 });
 
-export const WorkingViewSchema = z.object({
-  constraints: z.array(z.string()),
-  preferences: z.array(z.string()),
-  projectScale: ForgeProjectScaleSchema,
-  useForge: ForgeUseForgeSchema,
-  reasonCodes: z.array(ForgeReasonCodeSchema),
-  doNow: z.string().nullable(),
-  whyThisMattersNow: z.string().nullable(),
-  watchOut: z.string().nullable(),
-  notYet: z.array(z.string()),
-  recommendedWriteStyle: ForgeWriteStyleSchema,
-  avoidLoggingNoise: z.boolean(),
-  stateDensityWarning: z.string().optional(),
-  session: z.object({
-    summary: z.string().optional(),
-    nextStep: z.string().optional(),
-    updatedAt: TimestampSchema.optional()
-  }).nullable(),
-  recentDecisions: z.array(ProjectContextItemSchema),
-  recentConcerns: z.array(ProjectContextItemSchema),
-  recentObservations: z.array(ObservationRecordSchema),
-  openIssues: z.array(IssueRecordSchema),
-  activePhases: z.array(PhaseStateSchema),
-  openDrift: z.array(DriftRecordSchema),
-  architectureFocus: z.array(ProjectContextItemSchema),
-  linkedFiles: z.array(ForgeLinkedFileSchema),
-  resumeDiff: ForgeResumeDiffSchema.nullable()
+export const ForgeShapeReadInputSchema = z.object({
+  cwd: z.string().min(1).optional(),
+  domains: z.array(ShapeDomainSchema).min(1).max(3).optional(),
+  mode: z.enum(["compact", "full"]).default("compact")
+});
+
+export const ForgeShapeReadOutputSchema = z.object({
+  status: z.literal("ok"),
+  tool: z.literal("forge_shape"),
+  projectRoot: z.string(),
+  domains: z.array(ShapeDomainSchema),
+  mode: z.enum(["compact", "full"]),
+  meta: ShapeMetaSchema,
+  shape: z.object({
+    surfaces: z.array(ShapeSurfaceSchema).optional(),
+    capabilities: z.array(ShapeCapabilitySchema).optional(),
+    parts: z.array(ShapePartSchema).optional()
+  })
 });
 
 export const ForgeInitOutputSchema = z.object({
@@ -317,9 +326,20 @@ export const ForgeInitOutputSchema = z.object({
   files: z.object({
     memory: z.string(),
     plan: z.string(),
-    phases: z.string()
+    phases: z.string(),
+    shape: z.string()
   }),
   message: z.string()
+});
+
+const SmartNoteInputSchema = z.object({
+  kind: SmartNoteKindInputSchema,
+  text: z.string().min(1),
+  keywords: z.array(z.string().min(1)).max(8).optional(),
+  scope: SmartNoteScopeSchema.optional(),
+  confidence: z.enum(["low", "medium", "high"]).optional(),
+  relatedFiles: RelatedFilesSchema.optional(),
+  status: SmartNoteStatusSchema.optional()
 });
 
 export const ForgeLoadOutputSchema = z.object({
@@ -327,20 +347,61 @@ export const ForgeLoadOutputSchema = z.object({
   cwd: z.string(),
   projectRoot: z.string().nullable(),
   forgeDirectory: z.string().nullable(),
+  mode: z.enum(["compact", "full"]),
   global: GlobalStateSchema.nullable(),
   memory: MemoryStateSchema.nullable(),
   plan: PlanStateSchema.nullable(),
   phases: PhasesStateSchema.nullable(),
+  shapeMeta: ShapeMetaSchema.nullable(),
   workingView: WorkingViewSchema.nullable(),
   files: z.object({
     global: FileStatusSchema,
     memory: FileStatusSchema.nullable(),
     plan: FileStatusSchema.nullable(),
-    phases: FileStatusSchema.nullable()
+    phases: FileStatusSchema.nullable(),
+    shape: FileStatusSchema.nullable()
   })
 });
 
 export const ForgeUpdateInputSchema = z.union([
+  z.object({
+    domain: z.literal("memory"),
+    action: z.literal("add_note"),
+    cwd: z.string().min(1).optional(),
+    note: SmartNoteInputSchema
+  }),
+  z.object({
+    domain: z.literal("memory"),
+    action: z.literal("update_note"),
+    cwd: z.string().min(1).optional(),
+    id: z.string().min(1),
+    text: z.string().min(1).optional(),
+    keywords: z.array(z.string().min(1)).max(8).optional(),
+    scope: SmartNoteScopeSchema.optional(),
+    confidence: z.enum(["low", "medium", "high"]).optional(),
+    status: SmartNoteStatusSchema.optional(),
+    relatedFiles: RelatedFilesSchema.optional()
+  }).refine(
+    (value) =>
+      Boolean(
+        value.text ||
+        value.keywords ||
+        value.scope ||
+        value.confidence ||
+        value.status ||
+        value.relatedFiles
+      ),
+    {
+      message: "At least one note field must be updated."
+    }
+  ),
+  z.object({
+    domain: z.literal("memory"),
+    action: z.literal("set_note_status"),
+    cwd: z.string().min(1).optional(),
+    id: z.string().min(1),
+    status: SmartNoteStatusSchema
+  }),
   z.object({
     domain: z.literal("memory"),
     action: z.literal("add_decision"),
@@ -359,18 +420,33 @@ export const ForgeUpdateInputSchema = z.union([
   }),
   z.object({
     domain: z.literal("memory"),
-    action: z.literal("add_concern"),
+    action: z.literal("add_interpretation"),
     cwd: z.string().min(1).optional(),
     title: z.string().min(1),
     detail: z.string().min(1),
+    status: InterpretationStatusSchema.default("working"),
+    confidence: InterpretationConfidenceSchema.default("medium"),
+    basis: z.array(z.string().min(1)).optional(),
+    supersedes: z.array(EntityIdSchema).optional(),
     relatedFiles: RelatedFilesSchema.optional()
   }),
   z.object({
     domain: z.literal("memory"),
-    action: z.literal("add_favourite_prompt"),
+    action: z.literal("set_interpretation_status"),
+    cwd: z.string().min(1).optional(),
+    id: z.string().min(1),
+    status: InterpretationStatusSchema,
+    confidence: InterpretationConfidenceSchema.optional(),
+    detail: z.string().optional()
+  }),
+  z.object({
+    domain: z.literal("memory"),
+    action: z.literal("add_superseded_conclusion"),
     cwd: z.string().min(1).optional(),
     title: z.string().min(1),
-    prompt: z.string().min(1),
+    oldStatus: z.string().min(1),
+    reason: z.string().min(1),
+    replacement: z.string().min(1).optional(),
     relatedFiles: RelatedFilesSchema.optional()
   }),
   z.object({
@@ -381,6 +457,8 @@ export const ForgeUpdateInputSchema = z.union([
     title: z.string().min(1),
     detail: z.string().optional(),
     status: IssueStatusSchema.default("open"),
+    transformedInto: z.array(EntityIdSchema).optional(),
+    nextCheck: TimestampSchema.optional(),
     relatedFiles: RelatedFilesSchema.optional()
   }),
   z.object({
@@ -390,34 +468,10 @@ export const ForgeUpdateInputSchema = z.union([
     id: z.string().min(1),
     status: IssueStatusSchema,
     detail: z.string().optional()
-  }),
-  z.object({
-    domain: z.literal("memory"),
-    action: z.literal("resolve_issue"),
-    cwd: z.string().min(1).optional(),
-    id: z.string().min(1),
-    resolution: z.string().min(1)
-  }),
-  z.object({
-    domain: z.literal("memory"),
-    action: z.literal("reopen_issue"),
-    cwd: z.string().min(1).optional(),
-    id: z.string().min(1),
-    detail: z.string().optional()
-  }),
-  z.object({
-    domain: z.literal("memory"),
-    action: z.literal("add_habit"),
-    cwd: z.string().min(1).optional(),
-    description: z.string().min(1),
-    status: z.enum(["suggested", "confirmed", "declined"]).default("suggested")
-  }),
-  z.object({
-    domain: z.literal("memory"),
-    action: z.literal("set_habit_status"),
-    cwd: z.string().min(1).optional(),
-    id: z.string().min(1),
-    status: z.enum(["confirmed", "declined"])
+    ,
+    resolutionNote: z.string().optional(),
+    transformedInto: z.array(EntityIdSchema).optional(),
+    nextCheck: TimestampSchema.optional()
   }),
   z.object({
     domain: z.literal("memory"),
@@ -427,14 +481,6 @@ export const ForgeUpdateInputSchema = z.union([
     nextStep: z.string().min(1).optional()
   }).refine((value) => Boolean(value.summary || value.nextStep), {
     message: "At least one of summary or nextStep is required."
-  }),
-  z.object({
-    domain: z.literal("memory"),
-    action: z.literal("set_drift_status"),
-    cwd: z.string().min(1).optional(),
-    id: z.string().min(1),
-    status: z.enum(["acknowledged", "resolved"]),
-    note: z.string().optional()
   }),
   z.object({
     domain: z.literal("plan"),
@@ -469,14 +515,6 @@ export const ForgeUpdateInputSchema = z.union([
     relatedFiles: RelatedFilesSchema.optional()
   }),
   z.object({
-    domain: z.literal("plan"),
-    action: z.literal("add_accepted_suggestion"),
-    cwd: z.string().min(1).optional(),
-    title: z.string().min(1),
-    detail: z.string().min(1),
-    relatedFiles: RelatedFilesSchema.optional()
-  }),
-  z.object({
     domain: z.literal("phases"),
     action: z.literal("set_phase_status"),
     cwd: z.string().min(1).optional(),
@@ -485,214 +523,230 @@ export const ForgeUpdateInputSchema = z.union([
   })
 ]);
 
-export const ForgeLogInputSchema = z.object({
-  cwd: z.string().min(1).optional(),
-  kind: ObservationKindSchema,
-  summary: z.string().min(1),
-  detail: z.string().optional(),
-  relatedFiles: RelatedFilesSchema.optional()
+const ShapeSurfaceInputSchema = z.object({
+  id: z.string().min(1).optional(),
+  name: z.string().min(1),
+  purpose: z.string().min(1),
+  primaryUserGoal: z.string().min(1).optional(),
+  entryConditions: z.array(z.string().min(1)).optional(),
+  keyRegions: z.array(z.string().min(1)).optional(),
+  connectedCapabilities: z.array(EntityIdSchema).optional(),
+  connectedSurfaces: z.array(EntityIdSchema).optional(),
+  flowNotes: z.array(z.string().min(1)).optional(),
+  relatedFiles: RelatedFilesSchema.optional(),
+  state: ShapeStateSchemaEnum.optional(),
+  confidence: ShapeConfidenceSchema.optional()
 });
 
-export const ForgeStepDoneInputSchema = z.object({
-  cwd: z.string().min(1).optional(),
-  phaseId: z.string().min(1),
-  stepId: z.string().min(1),
-  note: z.string().optional()
+const ShapeCapabilityInputSchema = z.object({
+  id: z.string().min(1).optional(),
+  name: z.string().min(1),
+  purpose: z.string().min(1),
+  solves: z.string().min(1),
+  surfacedIn: z.array(EntityIdSchema).optional(),
+  supportedBy: z.array(EntityIdSchema).optional(),
+  dependsOn: z.array(EntityIdSchema).optional(),
+  inputs: z.array(z.string().min(1)).optional(),
+  outputs: z.array(z.string().min(1)).optional(),
+  relatedFiles: RelatedFilesSchema.optional(),
+  state: ShapeStateSchemaEnum.optional(),
+  confidence: ShapeConfidenceSchema.optional()
 });
+
+const ShapePartInputSchema = z.object({
+  id: z.string().min(1).optional(),
+  name: z.string().min(1),
+  role: z.string().min(1),
+  boundary: z.string().min(1).optional(),
+  supports: z.array(EntityIdSchema).optional(),
+  dependsOn: z.array(EntityIdSchema).optional(),
+  exposesTo: z.array(EntityIdSchema).optional(),
+  relatedFiles: RelatedFilesSchema.optional(),
+  state: ShapeStateSchemaEnum.optional(),
+  confidence: ShapeConfidenceSchema.optional()
+});
+
+const ShapeDeltaSchema = z.object({
+  summary: z.string().min(1).optional(),
+  projectType: z.string().min(1).optional(),
+  confidence: ShapeConfidenceSchema.optional(),
+  surfaces: z.array(ShapeSurfaceInputSchema).max(6).optional(),
+  capabilities: z.array(ShapeCapabilityInputSchema).max(6).optional(),
+  parts: z.array(ShapePartInputSchema).max(6).optional(),
+  remove: z.array(z.object({
+    domain: ShapeDomainSchema,
+    id: z.string().min(1)
+  })).max(6).optional()
+});
+
+const CheckpointShapeInputSchema = z
+  .object({
+    summary: z.string().min(1).optional(),
+    projectType: z.string().min(1).optional(),
+    confidence: ShapeConfidenceSchema.optional(),
+    surfaces: z.unknown().optional(),
+    capabilities: z.unknown().optional(),
+    parts: z.unknown().optional(),
+    remove: z.unknown().optional()
+  })
+  .superRefine((value, ctx) => {
+    const structuralKeys = ["surfaces", "capabilities", "parts", "remove"] as const;
+
+    for (const key of structuralKeys) {
+      if (value[key] !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message:
+            "forge_checkpoint shape only accepts summary, projectType, and confidence. Use forge_shape and forge_update_shape for structural shape edits."
+        });
+      }
+    }
+
+    if (!value.summary && !value.projectType && !value.confidence) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one of summary, projectType, or confidence is required."
+      });
+    }
+  })
+  .transform(({ summary, projectType, confidence }) => ({
+    ...(summary ? { summary } : {}),
+    ...(projectType ? { projectType } : {}),
+    ...(confidence ? { confidence } : {})
+  }));
+
+export const ForgeUpdateShapeInputSchema = z.union([
+  z.object({
+    cwd: z.string().min(1).optional(),
+    action: z.literal("set_summary"),
+    summary: z.string().min(1)
+  }),
+  z.object({
+    cwd: z.string().min(1).optional(),
+    action: z.literal("set_project_type"),
+    projectType: z.string().min(1)
+  }),
+  z.object({
+    cwd: z.string().min(1).optional(),
+    action: z.literal("set_confidence"),
+    confidence: ShapeConfidenceSchema
+  }),
+  z.object({
+    cwd: z.string().min(1).optional(),
+    action: z.literal("upsert_surface"),
+    surface: ShapeSurfaceInputSchema
+  }),
+  z.object({
+    cwd: z.string().min(1).optional(),
+    action: z.literal("remove_surface"),
+    id: z.string().min(1)
+  }),
+  z.object({
+    cwd: z.string().min(1).optional(),
+    action: z.literal("upsert_capability"),
+    capability: ShapeCapabilityInputSchema
+  }),
+  z.object({
+    cwd: z.string().min(1).optional(),
+    action: z.literal("remove_capability"),
+    id: z.string().min(1)
+  }),
+  z.object({
+    cwd: z.string().min(1).optional(),
+    action: z.literal("upsert_part"),
+    part: ShapePartInputSchema
+  }),
+  z.object({
+    cwd: z.string().min(1).optional(),
+    action: z.literal("remove_part"),
+    id: z.string().min(1)
+  })
+]);
 
 export const ForgeCheckpointInputSchema = z.object({
   cwd: z.string().min(1).optional(),
-  log: z.object({
-    kind: ObservationKindSchema,
+  summary: z.object({
     summary: z.string().min(1),
     detail: z.string().optional(),
     relatedFiles: RelatedFilesSchema.optional()
   }).optional(),
+  note: SmartNoteInputSchema.optional(),
   completedSteps: z.array(PhaseStepRefSchema).optional(),
+  shape: CheckpointShapeInputSchema.optional(),
   session: z.object({
     summary: z.string().min(1).optional(),
     nextStep: z.string().min(1).optional()
   }).refine((value) => Boolean(value.summary || value.nextStep), {
     message: "At least one of summary or nextStep is required."
-  }).optional()
+  }).optional(),
+  closeSession: z.boolean().default(false)
 }).refine(
-  (value) => Boolean(value.log || (value.completedSteps && value.completedSteps.length > 0) || value.session),
+  (value) =>
+    Boolean(
+        value.summary ||
+        value.note ||
+        (value.completedSteps && value.completedSteps.length > 0) ||
+        value.shape ||
+        value.session
+    ),
   {
-    message: "At least one of log, completedSteps, or session is required."
+    message: "At least one of summary, note, completedSteps, shape, or session is required."
   }
 );
 
 export const ForgeCheckpointPayloadSchema = z.object({
-  log: z.object({
-    kind: ObservationKindSchema,
+  summary: z.object({
     summary: z.string().min(1),
     detail: z.string().optional(),
     relatedFiles: RelatedFilesSchema.optional()
   }).optional(),
+  note: SmartNoteInputSchema.optional(),
   completedSteps: z.array(PhaseStepRefSchema).optional(),
+  shape: CheckpointShapeInputSchema.optional(),
   session: z.object({
     summary: z.string().min(1).optional(),
     nextStep: z.string().min(1).optional()
   }).refine((value) => Boolean(value.summary || value.nextStep), {
     message: "At least one of summary or nextStep is required."
-  }).optional()
+  }).optional(),
+  closeSession: z.boolean().default(false)
 }).refine(
-  (value) => Boolean(value.log || (value.completedSteps && value.completedSteps.length > 0) || value.session),
+  (value) =>
+    Boolean(
+        value.summary ||
+        value.note ||
+        (value.completedSteps && value.completedSteps.length > 0) ||
+        value.shape ||
+        value.session
+    ),
   {
-    message: "At least one of log, completedSteps, or session is required."
+    message: "At least one of summary, note, completedSteps, shape, or session is required."
   }
 );
-
-export const ForgeRebuildPhasesInputSchema = z.object({
-  cwd: z.string().min(1).optional(),
-  phases: z.array(PhaseStateSchema).min(1)
-});
-
-export const ForgeFlagDriftInputSchema = z.object({
-  cwd: z.string().min(1).optional(),
-  severity: SeveritySchema,
-  summary: z.string().min(1),
-  detail: z.string().optional(),
-  relatedFiles: RelatedFilesSchema.optional()
-});
-
-export const ForgeCompareExecutionInputSchema = z.object({
-  cwd: z.string().min(1).optional(),
-  observedExecution: z.string().min(1),
-  files: RelatedFilesSchema.optional()
-});
-
-export const ForgeSessionEndInputSchema = z.object({
-  cwd: z.string().min(1).optional(),
-  summary: z.string().min(1),
-  nextStep: z.string().min(1),
-  issuesAndNicetiesAsked: z.array(IssuesAndNicetiesAskedInputItemSchema).max(5).optional()
-});
-
-export const ForgeSessionEndPayloadSchema = z.object({
-  summary: z.string().min(1),
-  nextStep: z.string().min(1),
-  issuesAndNicetiesAsked: z.array(IssuesAndNicetiesAskedInputItemSchema).max(5).optional()
-});
-
-export const ForgeSuggestUpdateInputSchema = z.object({
-  cwd: z.string().min(1).optional(),
-  summary: z.string().min(1),
-  detail: z.string().optional(),
-  completedSteps: z.array(PhaseStepRefSchema).optional(),
-  closingSession: z.boolean().default(false)
-});
-
-export const ForgeSessionDraftInputSchema = z.object({
-  cwd: z.string().min(1).optional(),
-  recentWork: z.string().min(1).optional(),
-  log: z.object({
-    kind: ObservationKindSchema,
-    summary: z.string().min(1),
-    detail: z.string().optional(),
-    relatedFiles: RelatedFilesSchema.optional()
-  }).optional(),
-  completedSteps: z.array(PhaseStepRefSchema).optional()
-});
 
 export const ForgeCheckpointOutputSchema = z.object({
   status: z.literal("ok"),
   tool: z.literal("forge_checkpoint"),
-  updatedFiles: z.array(z.enum(["memory", "phases"])).min(1),
+  updatedFiles: z.array(z.enum(["memory", "plan", "phases", "shape"])).min(1),
   message: z.string(),
-  loggedEntityId: z.string().optional(),
+  entryId: z.string().optional(),
+  noteId: z.string().optional(),
   completedSteps: z.array(z.object({
     phaseId: z.string(),
     stepId: z.string()
   })),
-  sessionUpdated: z.boolean()
-});
-
-export const ForgeSuggestUpdateOutputSchema = z.object({
-  status: z.literal("ok"),
-  tool: z.literal("forge_suggest_update"),
-  recommendation: ForgeSuggestUpdateRecommendationSchema,
-  confidence: ForgeConfidenceSchema,
-  rationale: z.string(),
-  draft: ForgeSuggestedUpdateShapeSchema.optional()
-});
-
-export const ForgeCompareExecutionOutputSchema = z.object({
-  status: z.literal("ok"),
-  tool: z.literal("forge_compare_execution"),
-  alignment: ForgeExecutionAlignmentSchema,
-  summary: z.string().min(1),
-  rationale: z.string().min(1),
-  matchingDecisions: z.array(ForgeCompareMatchSchema),
-  matchingArchitecture: z.array(ForgeCompareMatchSchema),
-  matchingPhases: z.array(ForgeComparePhaseMatchSchema),
-  relatedOpenIssues: z.array(ForgeCompareMatchSchema),
-  relatedOpenDrift: z.array(ForgeCompareDriftSchema),
-  impactedFiles: z.array(z.string().min(1)),
-  staleAssumptions: z.array(z.string().min(1)),
-  suggestedActions: z.array(z.string().min(1)),
-  collaborationBrief: z.array(z.string().min(1)).max(3)
-});
-
-export const ForgeSessionDraftOutputSchema = z.object({
-  status: z.literal("ok"),
-  tool: z.literal("forge_session_draft"),
-  recommendedCloseTool: z.enum(["forge_checkpoint", "forge_session_end"]),
-  summary: z.string().min(1),
-  nextStep: z.string().min(1),
-  warnings: z.array(z.string()),
-  readiness: SessionDraftReadinessSchema,
-  likelyCompletedSteps: z.array(z.object({
-    phaseId: z.string(),
-    stepId: z.string(),
-    title: z.string()
-  })),
-  unresolvedIssues: z.array(z.object({
-    id: z.string(),
-    title: z.string(),
-    detail: z.string().optional()
-  })),
-  openDrift: z.array(z.object({
-    id: z.string(),
-    severity: SeveritySchema,
-    status: DriftStatusSchema,
-    summary: z.string()
-  })),
-  draftPayload: z.union([
-    z.object({
-      tool: z.literal("forge_checkpoint"),
-      payload: ForgeCheckpointPayloadSchema
-    }),
-    z.object({
-      tool: z.literal("forge_session_end"),
-      payload: ForgeSessionEndPayloadSchema
-    })
-  ])
-});
-
-export const ForgeSessionEndOutputSchema = z.object({
-  status: z.literal("ok"),
-  tool: z.literal("forge_session_end"),
-  updatedFile: z.literal("memory"),
-  message: z.string(),
-  feedbackFilePath: z.string().optional(),
-  feedbackEntries: z.array(z.object({
-    id: z.string().min(1),
-    kind: IssuesAndNicetiesKindSchema,
-    summary: z.string().min(1),
-    createdAt: TimestampSchema
-  })).default([])
+  sessionUpdated: z.boolean(),
+  sessionClosed: z.boolean().default(false),
+  shapeUpdated: z.boolean().default(false)
 });
 
 export const WriteResultSchema = z.object({
   status: z.literal("ok"),
   tool: z.string(),
-  updatedFile: z.enum(["memory", "plan", "phases"]),
+  updatedFile: z.enum(["memory", "plan", "phases", "shape"]),
   message: z.string(),
   entityId: z.string().optional(),
   phaseId: z.string().optional(),
-  stepId: z.string().optional(),
-  severity: SeveritySchema.optional(),
-  recommendedAction: z.string().optional(),
-  requiresAttention: z.boolean().optional()
+  stepId: z.string().optional()
 });

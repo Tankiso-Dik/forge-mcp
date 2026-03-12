@@ -16,10 +16,10 @@ Operating expectations:
 - Prefer real corrections over cosmetic churn.
 - Keep terminal narration brief.
 - If something is still open, resolve it properly instead of pretending the workspace is done.
-- Treat stale issue, drift, and phase state as a real bug, not a cosmetic detail.
+- Treat stale issue and phase state as a real bug, not a cosmetic detail.
 
 Success means:
 
 - the deliverables are coherent together
-- prior issues, drift, and phase state are not stale
+- prior issues and phase state are not stale
 - the final handoff is short and accurate

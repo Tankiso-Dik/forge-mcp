@@ -1,5 +1,0 @@
-{
-  "name": "project-medium",
-  "description": "A medium Forge-managed project with enough history to test workingView pruning.",
-  "entryCwd": "."
-}
